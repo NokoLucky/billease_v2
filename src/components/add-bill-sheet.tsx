@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -36,6 +35,7 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { DialogPortal } from '@radix-ui/react-dialog';
 
 const billSchema = z.object({
   name: z.string().min(1, 'Bill name is required'),
@@ -167,17 +167,19 @@ export function AddBillSheet({ children, onBillAdded }: { children: React.ReactN
                                         </Button>
                                     </FormControl>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) =>
-                                            date < new Date("1900-01-01")
-                                        }
-                                        initialFocus
-                                    />
-                                </PopoverContent>
+                                <DialogPortal>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={field.onChange}
+                                            disabled={(date) =>
+                                                date < new Date("1900-01-01")
+                                            }
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </DialogPortal>
                             </Popover>
                              <FormMessage />
                         </FormItem>
