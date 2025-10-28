@@ -10,7 +10,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider
         attribute="class"
-        defaultTheme="system"
+        defaultTheme="light"
         enableSystem
         disableTransitionOnChange
     >
@@ -27,3 +27,4 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     </ThemeProvider>
   );
 }
+
