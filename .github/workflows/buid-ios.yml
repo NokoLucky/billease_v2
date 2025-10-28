@@ -1,4 +1,4 @@
-name: Build iOS IPA for Sideloadly (Next.js + Capacitor)
+name: Build iOS IPA for Next.js Capacitor App
 
 on:
   workflow_dispatch:
@@ -11,42 +11,38 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm'
 
       - name: Install dependencies
         run: |
-          npm install --legacy-peer-deps
+          npm ci
 
-      - name: Build Next.js project
+      - name: Build Next.js app
         run: |
           npm run build
-          npm run export
-          # Ensure Capacitor knows where the built web assets are
-          if [ -f "capacitor.config.ts" ]; then
-            echo "✅ capacitor.config.ts already points to 'out' folder"
-          else
-            echo "⚠️ Ensure capacitor.config.ts has webDir: 'out'"
-          fi
 
-      - name: Sync Capacitor and install iOS dependencies
+      - name: Sync Capacitor iOS platform
         run: |
           npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        run: |
           cd ios/App
           sudo gem install cocoapods
           pod install --repo-update
 
-      - name: Build Development IPA
+      - name: Build iOS IPA
         run: |
           cd ios/App
           rm -rf build Payload
-
-          # Build the Xcode project without code signing
+          
           xcodebuild -workspace App.xcworkspace \
             -scheme App \
-            -configuration Debug \
+            -configuration Release \
             -destination 'generic/platform=iOS' \
             -derivedDataPath Build \
             CODE_SIGNING_ALLOWED=NO \
@@ -54,30 +50,34 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build
 
-          # Create IPA manually
           mkdir -p Payload
-          mkdir -p build
-
-          # Copy the .app bundle
-          if [ -d "Build/Build/Products/Debug-iphoneos/App.app" ]; then
-            cp -r Build/Build/Products/Debug-iphoneos/App.app Payload/
-          elif [ -d "Build/Products/Debug-iphoneos/App.app" ]; then
-            cp -r Build/Products/Debug-iphoneos/App.app Payload/
+          
+          if [ -d "Build/Build/Products/Release-iphoneos/App.app" ]; then
+            cp -r Build/Build/Products/Release-iphoneos/App.app Payload/
+          elif [ -d "Build/Products/Release-iphoneos/App.app" ]; then
+            cp -r Build/Products/Release-iphoneos/App.app Payload/
           else
-            echo "Looking for .app file..."
+            echo "Searching for .app file..."
             find Build -name "*.app" -type d
             exit 1
           fi
-
-          # Package as .ipa
-          zip -r build/App.ipa Payload
+          
+          zip -qr build/App.ipa Payload
           rm -rf Payload
-
-          echo "✅ IPA created at: ios/App/build/App.ipa"
+          
+          echo "✅ IPA created successfully!"
           ls -la build/
 
-      - name: Upload IPA for Sideloadly
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-sideloadly-ipa
+          name: bill-ease-ios-ipa
           path: ios/App/build/App.ipa
+          retention-days: 7
+
+      - name: Build summary
+        run: |
+          echo "🎉 iOS build completed!"
+          echo "📱 App: BillEase"
+          echo "📦 Download the IPA from Artifacts section"
+          echo "🔧 Use Sideloadly to install on iOS devices"
