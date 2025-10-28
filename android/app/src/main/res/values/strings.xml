@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BillEase</string>
+    <string name="title_activity_main">BillEase</string>
+    <string name="package_name">com.billease.app</string>
+    <string name="custom_url_scheme">com.billease.app</string>
+</resources>
