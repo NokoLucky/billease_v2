@@ -54,4 +54,4 @@ jobs:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
         run: |
           cd ios/App
-          fastlane deploy
+          bundle exec fastlane deploy --verbose
