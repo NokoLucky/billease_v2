@@ -43,27 +43,21 @@ jobs:
           sudo gem install cocoapods
           pod install --repo-update
 
-      - name: Create API Key JSON File
+      - name: Create App Store Connect API Key File
         run: |
           cd ios/App
-          cat > api_key.json << EOF
-          {
-            "key_id": "$APPSTORE_CONNECT_KEY_ID",
-            "issuer_id": "$APPSTORE_CONNECT_ISSUER_ID",
-            "key": "$APPSTORE_CONNECT_PRIVATE_KEY"
-          }
-          EOF
+          # Create the .p8 file for authentication
+          echo "$APPSTORE_CONNECT_PRIVATE_KEY" > AuthKey_$APPSTORE_CONNECT_KEY_ID.p8
+          ls -la *.p8
         env:
-          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
-          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
           APPSTORE_CONNECT_PRIVATE_KEY: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
+          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
 
-      - name: Deploy to TestFlight with Fastlane Match
+      - name: Deploy to TestFlight
         env:
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APP_STORE_CONNECT_KEY_PATH: "AuthKey_${{ secrets.APPSTORE_CONNECT_KEY_ID }}.p8"
         run: |
           cd ios/App
           fastlane deploy --verbose
