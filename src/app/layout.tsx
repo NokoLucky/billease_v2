@@ -23,7 +23,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans&display=swap" rel="stylesheet" />
       </head>
-      <body className={cn("font-body antialiased pt-8 md:pt-0")}>
+      <body className={cn("font-body antialiased")}>
         <MainLayout>
           {children}
         </MainLayout>

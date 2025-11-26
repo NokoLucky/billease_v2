@@ -12,7 +12,7 @@ export function PageHeader({ title, children, className }: PageHeaderProps) {
   return (
     <header
       className={cn(
-        'flex items-center justify-between pb-4 border-b sticky top-0 bg-background z-10 p-4 md:p-0 md:relative md:bg-transparent md:border-none',
+        'flex items-center justify-between p-4 border-b',
         className
       )}
     >
