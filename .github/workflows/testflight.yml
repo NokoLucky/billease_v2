@@ -43,22 +43,22 @@ jobs:
           sudo gem install cocoapods
           pod install --repo-update
 
-      - name: Configure Project for Automatic Signing
+      - name: Create API Key JSON File
         run: |
           cd ios/App
-          sed -i '' 's/ProvisioningStyle = Manual;/ProvisioningStyle = Automatic;/g' App.xcodeproj/project.pbxproj || true
-          sed -i '' 's/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Automatic;/g' App.xcodeproj/project.pbxproj || true
-
-      - name: Create Authentication Key File
-        run: |
-          cd ios/App
-          echo "$APPSTORE_CONNECT_PRIVATE_KEY" > AuthKey_$APPSTORE_CONNECT_KEY_ID.p8
-          echo "Created authentication key file"
+          cat > api_key.json << EOF
+          {
+            "key_id": "$APPSTORE_CONNECT_KEY_ID",
+            "issuer_id": "$APPSTORE_CONNECT_ISSUER_ID",
+            "key": "$APPSTORE_CONNECT_PRIVATE_KEY"
+          }
+          EOF
         env:
-          APPSTORE_CONNECT_PRIVATE_KEY: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
           APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+          APPSTORE_CONNECT_PRIVATE_KEY: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
 
-      - name: Deploy to TestFlight with Fastlane
+      - name: Deploy to TestFlight with Fastlane Match
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
