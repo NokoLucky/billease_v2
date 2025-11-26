@@ -15,13 +15,8 @@ jobs:
 
       - name: Update Bundle Identifier
         run: |
-          # Update capacitor config
           sed -i '' 's/"appId": "com.billease.app"/"appId": "com.billease.app.UNC2YV5NU9"/' capacitor.config.ts
-          
-          # Update iOS project file
           sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = "com.billease.app";/PRODUCT_BUNDLE_IDENTIFIER = "com.billease.app.UNC2YV5NU9";/g' ios/App/App.xcodeproj/project.pbxproj
-          
-          # Update Info.plist
           sed -i '' 's/<string>com.billease.app<\/string>/<string>com.billease.app.UNC2YV5NU9<\/string>/' ios/App/App/Info.plist
 
       - name: Set up Node.js
@@ -48,56 +43,15 @@ jobs:
           sudo gem install cocoapods
           pod install --repo-update
 
-      - name: Configure Code Signing
+      - name: Setup Fastlane
+        run: |
+          sudo gem install fastlane -NV
+
+      - name: Deploy to TestFlight with Fastlane
+        env:
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
         run: |
           cd ios/App
-          # Create export options with automatic signing
-          cat > ExportOptions.plist << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-              <key>teamID</key>
-              <string>${{ secrets.APPSTORE_CONNECT_TEAM_ID }}</string>
-              <key>signingStyle</key>
-              <string>automatic</string>
-              <key>uploadBitcode</key>
-              <false/>
-              <key>uploadSymbols</key>
-              <true/>
-          </dict>
-          </plist>
-          EOF
-
-      - name: Build iOS Archive
-        run: |
-          cd ios/App
-          xcodebuild -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath ./build/App.xcarchive \
-            -allowProvisioningUpdates \
-            -authenticationKeyID ${{ secrets.APPSTORE_CONNECT_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }} \
-            -authenticationKeyPath <(echo "${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}" | base64 -d) \
-            archive
-
-      - name: Export IPA
-        run: |
-          cd ios/App
-          xcodebuild -exportArchive \
-            -archivePath ./build/App.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath ./build \
-            -allowProvisioningUpdates
-
-      - name: Upload to TestFlight
-        uses: apple-actions/upload-testflight-build@v1
-        with:
-          app-store-connect-api-key: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
-          app-store-connect-api-key-id: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
-          app-store-connect-api-issuer: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
-          ipa-path: ios/App/build/App.ipa
+          fastlane deploy
