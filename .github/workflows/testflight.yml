@@ -43,9 +43,12 @@ jobs:
           sudo gem install cocoapods
           pod install --repo-update
 
-      - name: Setup Fastlane
+      - name: Configure Project for Automatic Signing
         run: |
-          sudo gem install fastlane -NV
+          cd ios/App
+          # Enable automatic signing in project file
+          sed -i '' 's/ProvisioningStyle = Manual;/ProvisioningStyle = Automatic;/g' App.xcodeproj/project.pbxproj || true
+          sed -i '' 's/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Automatic;/g' App.xcodeproj/project.pbxproj || true
 
       - name: Deploy to TestFlight with Fastlane
         env:
