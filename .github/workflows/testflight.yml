@@ -46,9 +46,17 @@ jobs:
       - name: Configure Project for Automatic Signing
         run: |
           cd ios/App
-          # Enable automatic signing in project file
           sed -i '' 's/ProvisioningStyle = Manual;/ProvisioningStyle = Automatic;/g' App.xcodeproj/project.pbxproj || true
           sed -i '' 's/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Automatic;/g' App.xcodeproj/project.pbxproj || true
+
+      - name: Create Authentication Key File
+        run: |
+          cd ios/App
+          echo "$APPSTORE_CONNECT_PRIVATE_KEY" > AuthKey_$APPSTORE_CONNECT_KEY_ID.p8
+          echo "Created authentication key file"
+        env:
+          APPSTORE_CONNECT_PRIVATE_KEY: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
+          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
 
       - name: Deploy to TestFlight with Fastlane
         env:
