@@ -7,6 +7,9 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
+      
+      vars:
+        APPLE_TEAM_ID: "UNC2YV5NU9"
 
     scripts:
       - name: Build everything
@@ -16,14 +19,26 @@ workflows:
           npx cap sync ios
           cd ios/App && pod install
           
-          # Use the export-options.plist from project root
-          xcode-project build-ipa \
-            --workspace "App.xcworkspace" \
-            --scheme "App" \
-            --export-options-plist $CM_PROJECT_DIR/export-options.plist
+          # Archive with explicit team ID
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            -allowProvisioningUpdates \
+            DEVELOPMENT_TEAM=$APPLE_TEAM_ID
+
+      - name: Export IPA
+        script: |
+          cd ios/App
+          xcodebuild -exportArchive \
+            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            -exportPath $CM_BUILD_DIR/ipa \
+            -exportOptionsPlist $CM_PROJECT_DIR/export-options.plist \
+            -allowProvisioningUpdates
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - $CM_BUILD_DIR/ipa/*.ipa
 
     publishing:
       app_store_connect:
