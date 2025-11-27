@@ -7,6 +7,9 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
+      
+      integrations:
+        app_store_connect: "personal-apple-account"  
 
     scripts:
       - name: Install dependencies
@@ -26,7 +29,7 @@ workflows:
           cd ios/App
           pod install
 
-      - name: Set up code signing with integration
+      - name: Set up code signing
         script: |
           xcode-project use-profiles --project "ios/App/App.xcworkspace" --scheme "App"
 
@@ -41,5 +44,5 @@ workflows:
 
     publishing:
       app_store_connect:
-        # These will now use the integration you set up
+        # This will inherit from the integration above
         submit_to_testflight: true
