@@ -28,7 +28,8 @@ workflows:
 
       - name: Set up code signing
         script: |
-          xcode-project use-profiles --project "ios/App/App.xcworkspace" --scheme "App"
+          cd ios/App
+          xcode-project use-profiles
 
       - name: Build IPA
         script: |
@@ -41,5 +42,7 @@ workflows:
 
     publishing:
       app_store_connect:
-        auth: integration 
+        api_key: $APPSTORE_CONNECT_PRIVATE_KEY
+        key_id: $APPSTORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
