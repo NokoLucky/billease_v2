@@ -1,6 +1,6 @@
 workflows:
   ios_testflight:
-    name: iOS TestFlight Debug
+    name: iOS TestFlight
     max_build_duration: 120
 
     environment:
@@ -9,36 +9,47 @@ workflows:
       xcode: latest
 
     scripts:
-      - name: Debug information
-        script: |
-          echo "=== Debug Info ==="
-          echo "Bundle ID: com.billease.app.UNC2YV5NU9"
-          echo "Team ID: UNC2YV5NU9"
-          echo "Current directory:"
-          pwd
-          ls -la
-          
-          # Check if we can list available profiles
-          cd ios/App
-          echo "=== Available signing identities ==="
-          security find-identity -v -p codesigning || echo "No identities found"
-          
-          echo "=== Trying to use profiles ==="
-          xcode-project use-profiles --verbose || echo "use-profiles failed"
-
-      - name: Build app
+      - name: Build web app
         script: |
           npm ci
           npm run build
           npx cap sync ios
-          cd ios/App && pod install
+
+      - name: Build iOS app
+        script: |
+          cd ios/App
+          pod install
           
-          # Try building with different approaches
-          echo "=== Attempting build ==="
-          xcode-project build-ipa --workspace "App.xcworkspace" --scheme "App" --verbose
+          # Create export-options.plist
+          cat > export_options.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>UNC2YV5NU9</string>
+          </dict>
+          </plist>
+          EOF
+          
+          # Use absolute paths with CM_BUILD_DIR
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            -allowProvisioningUpdates
+
+          xcodebuild -exportArchive \
+            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            -exportPath $CM_BUILD_DIR/ipa \
+            -exportOptionsPlist export_options.plist \
+            -allowProvisioningUpdates
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - $CM_BUILD_DIR/ipa/*.ipa
 
     publishing:
       app_store_connect:
