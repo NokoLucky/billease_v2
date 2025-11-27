@@ -9,47 +9,20 @@ workflows:
       xcode: latest
 
     scripts:
-      - name: Build web app
+      - name: Build everything
         script: |
           npm ci
           npm run build
           npx cap sync ios
-
-      - name: Build iOS app
-        script: |
-          cd ios/App
-          pod install
+          cd ios/App && pod install
           
-          # Create export-options.plist
-          cat > export-options.plist << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-              <key>teamID</key>
-              <string>UNC2YV5NU9</string>
-          </dict>
-          </plist>
-          EOF
-          
-          # Use absolute paths for build directories
-          xcodebuild archive \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -archivePath $CM_BUILD_DIR/App.xcarchive \
-            -allowProvisioningUpdates
-
-          xcodebuild -exportArchive \
-            -archivePath $CM_BUILD_DIR/App.xcarchive \
-            -exportPath $CM_BUILD_DIR/ipa \
-            -exportOptionsPlist export-options.plist \
-            -allowProvisioningUpdates
+          # Simple build - let Codemagic handle everything
+          xcode-project build-ipa \
+            --workspace "App.xcworkspace" \
+            --scheme "App"
 
     artifacts:
-      - $CM_BUILD_DIR/ipa/*.ipa
+      - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
