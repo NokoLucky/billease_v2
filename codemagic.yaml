@@ -7,10 +7,6 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
-      
-      # Reference your integration (use the name you gave it)
-      integrations:
-        app_store_connect: personal-apple-account  # Use your integration name here
 
     scripts:
       - name: Install dependencies
@@ -30,7 +26,11 @@ workflows:
           cd ios/App
           pod install
 
-      - name: Build IPA with integration
+      - name: Set up code signing with integration
+        script: |
+          xcode-project use-profiles --project "ios/App/App.xcworkspace" --scheme "App"
+
+      - name: Build IPA
         script: |
           xcode-project build-ipa \
             --project "ios/App/App.xcworkspace" \
@@ -41,4 +41,5 @@ workflows:
 
     publishing:
       app_store_connect:
+        # These will now use the integration you set up
         submit_to_testflight: true
