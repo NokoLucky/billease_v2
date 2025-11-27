@@ -7,6 +7,11 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
+      
+      # Use Codemagic's automatic code signing
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.billease.app.UNC2YV5NU9
 
     scripts:
       - name: Install dependencies
@@ -26,16 +31,10 @@ workflows:
           cd ios/App
           pod install
 
-      - name: Set up code signing
-        script: |
-          cd ios/App
-          xcode-project use-profiles
-
       - name: Build IPA
         script: |
-          cd ios/App
           xcode-project build-ipa \
-            --workspace "App.xcworkspace" \
+            --workspace "ios/App/App.xcworkspace" \
             --scheme "App"
 
     artifacts:
