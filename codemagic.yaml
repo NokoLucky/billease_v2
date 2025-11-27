@@ -8,13 +8,6 @@ workflows:
       cocoapods: default
       xcode: latest
 
-      vars:
-        BUNDLE_ID: "com.billease.app.UNC2YV5NU9"
-
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: $BUNDLE_ID
-
     scripts:
       - name: Install dependencies
         script: |
@@ -33,12 +26,20 @@ workflows:
           cd ios/App
           pod install
 
-      - name: Build iOS IPA
+      - name: Configure automatic code signing
+        script: |
+          cd ios/App
+          # Ensure automatic code signing is enabled
+          xcode-project configure-for-automatic-codesigning "App.xcworkspace" "App"
+
+      - name: Build IPA
         script: |
           xcode-project build-ipa \
             --project "ios/App/App.xcworkspace" \
-            --scheme "App"
-            
+            --scheme "App" \
+            --archive-flags "-allowProvisioningUpdates" \
+            --export-options-plist $CM_PROJECT_DIR/export-options.plist
+
     artifacts:
       - build/ios/ipa/*.ipa
 
