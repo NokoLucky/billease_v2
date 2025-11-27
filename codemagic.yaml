@@ -7,49 +7,27 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
+      
+      # Use Codemagic's automatic code signing
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.billease.app.UNC2YV5NU9
 
     scripts:
-      - name: Build web app
+      - name: Build everything
         script: |
           npm ci
           npm run build
           npx cap sync ios
-
-      - name: Build iOS app
-        script: |
-          cd ios/App
-          pod install
+          cd ios/App && pod install
           
-          # Create export-options.plist in current directory
-          cat > export_options.plist << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-              <key>teamID</key>
-              <string>UNC2YV5NU9</string>
-          </dict>
-          </plist>
-          EOF
-          
-          # Build with correct relative paths
-          xcodebuild archive \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -archivePath ./build/App.xcarchive \
-            -allowProvisioningUpdates
-
-          xcodebuild -exportArchive \
-            -archivePath ./build/App.xcarchive \
-            -exportPath ./build/ipa \
-            -exportOptionsPlist ./export_options.plist \
-            -allowProvisioningUpdates
+          # Simple build
+          xcode-project build-ipa \
+            --workspace "App.xcworkspace" \
+            --scheme "App"
 
     artifacts:
-      - ios/App/build/ipa/*.ipa
+      - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
