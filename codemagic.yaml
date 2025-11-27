@@ -7,6 +7,9 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
+      
+      integrations:
+        app_store_connect: personal-apple-account
 
     scripts:
       - name: Build everything
@@ -16,21 +19,14 @@ workflows:
           npx cap sync ios
           cd ios/App && pod install
           
-          # Copy export-options.plist to current directory
-          cp $CM_PROJECT_DIR/export-options.plist ./export-options.plist
-          
-          # Build with local export-options.plist
+          # Use the correct path and let integration handle signing
           xcode-project build-ipa \
             --workspace "App.xcworkspace" \
-            --scheme "App" \
-            --export-options-plist ./export-options.plist
+            --scheme "App"
 
     artifacts:
       - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
-        api_key: $APPSTORE_CONNECT_PRIVATE_KEY
-        key_id: $APPSTORE_CONNECT_KEY_ID
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
