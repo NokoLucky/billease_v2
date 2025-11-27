@@ -9,48 +9,21 @@ workflows:
       xcode: latest
 
     scripts:
-      - name: Install dependencies
+      - name: Build everything
         script: |
           npm ci
-
-      - name: Build Next.js
-        script: |
           npm run build
-
-      - name: Sync Capacitor
-        script: |
           npx cap sync ios
-
-      - name: Install CocoaPods
-        script: |
-          cd ios/App
-          pod install
-
-      - name: Build with automatic provisioning
-        script: |
-          cd ios/App
+          cd ios/App && pod install
           
-          # Archive with automatic provisioning
-          xcodebuild archive \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -archivePath $CM_BUILD_DIR/App.xcarchive \
-            -allowProvisioningUpdates \
-            -allowProvisioningDeviceRegistration
-
-      - name: Export IPA
-        script: |
-          cd ios/App
-          
-          xcodebuild -exportArchive \
-            -archivePath $CM_BUILD_DIR/App.xcarchive \
-            -exportPath $CM_BUILD_DIR/ipa \
-            -exportOptionsPlist $CM_PROJECT_DIR/export-options.plist \
-            -allowProvisioningUpdates
+          # Let Codemagic handle everything
+          xcode-project build-ipa \
+            --workspace "App.xcworkspace" \
+            --scheme "App" \
+            --archive-flags "-allowProvisioningUpdates -allowProvisioningDeviceRegistration"
 
     artifacts:
-      - $CM_BUILD_DIR/ipa/*.ipa
+      - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
