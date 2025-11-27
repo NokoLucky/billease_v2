@@ -26,16 +26,30 @@ workflows:
           cd ios/App
           pod install
 
-      - name: Build IPA with automatic code signing
+      - name: Build and archive with automatic signing
         script: |
-          xcode-project build-ipa \
-            --project "ios/App/App.xcworkspace" \
-            --scheme "App" \
-            --archive-flags "-allowProvisioningUpdates" \
-            --export-options-plist $CM_PROJECT_DIR/export-options.plist
+          cd ios/App
+          
+          # Archive with automatic provisioning
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath $CM_BUILD_DIR/build/App.xcarchive \
+            -allowProvisioningUpdates
+
+      - name: Export IPA
+        script: |
+          cd ios/App
+          
+          xcodebuild -exportArchive \
+            -archivePath $CM_BUILD_DIR/build/App.xcarchive \
+            -exportPath $CM_BUILD_DIR/build/ipa \
+            -exportOptionsPlist $CM_PROJECT_DIR/export-options.plist \
+            -allowProvisioningUpdates
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - $CM_BUILD_DIR/build/ipa/*.ipa
 
     publishing:
       app_store_connect:
