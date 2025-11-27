@@ -16,11 +16,11 @@ workflows:
           npx cap sync ios
           cd ios/App && pod install
           
-          # Let Codemagic handle everything
+          # Use the export-options.plist from project root
           xcode-project build-ipa \
             --workspace "App.xcworkspace" \
             --scheme "App" \
-            --archive-flags "-allowProvisioningUpdates -allowProvisioningDeviceRegistration"
+            --export-options-plist $CM_PROJECT_DIR/export-options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
