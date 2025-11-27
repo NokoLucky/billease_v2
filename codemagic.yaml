@@ -16,14 +16,18 @@ workflows:
           npx cap sync ios
           cd ios/App && pod install
           
-          # Use xcode-project without any export options
+          # Debug: check current directory and files
+          pwd
+          ls -la
+          echo "Building IPA..."
+          
+          # Simple build command
           xcode-project build-ipa \
             --workspace "App.xcworkspace" \
-            --scheme "App" \
-            --output-dir "./build/ipa"
+            --scheme "App"
 
     artifacts:
-      - ios/App/build/ipa/*.ipa
+      - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
