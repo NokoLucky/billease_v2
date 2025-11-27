@@ -7,6 +7,9 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
+      
+      vars:
+        APP_STORE_CONNECT_TEAM_ID: "UNC2YV5NU9" 
 
     scripts:
       - name: Install dependencies
@@ -26,17 +29,17 @@ workflows:
           cd ios/App
           pod install
 
-      - name: Build and archive with automatic signing
+      - name: Build and archive with team ID
         script: |
           cd ios/App
           
-          # Archive with automatic provisioning
           xcodebuild archive \
             -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
             -archivePath $CM_BUILD_DIR/build/App.xcarchive \
-            -allowProvisioningUpdates
+            -allowProvisioningUpdates \
+            DEVELOPMENT_TEAM=$APP_STORE_CONNECT_TEAM_ID
 
       - name: Export IPA
         script: |
