@@ -10,13 +10,11 @@ workflows:
 
       vars:
         APPLE_ID: "nokolucky19@gmail.com"
-        BUNDLE_ID: "com.billease.app.UNC2YV5NU9"  # Use a variable for consistency
+        BUNDLE_ID: "com.billease.app.UNC2YV5NU9"
 
       ios_signing:
         distribution_type: app_store
         bundle_identifier: $BUNDLE_ID
-        # Let Codemagic automatically manage certificates
-        automatic: true
 
     scripts:
       - name: Install dependencies
@@ -37,11 +35,10 @@ workflows:
           pod install --repo-update
           cd ../..
 
-      - name: Set up code signing
+      - name: Set up code signing certificates
         script: |
-          cd ios/App
-          # Ensure the project uses automatic code signing
-          xcode-project use-profiles
+          # Codemagic automatically sets up certificates based on ios_signing configuration
+          keychain initialize
 
       - name: Archive iOS build with Xcode
         script: |
