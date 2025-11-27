@@ -8,10 +8,11 @@ workflows:
       cocoapods: default
       xcode: latest
       
-      # Use Codemagic's automatic code signing
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.billease.app.UNC2YV5NU9
+        # Force certificate generation
+        certificate: $APP_STORE_CERTIFICATE_PRIVATE_KEY
 
     scripts:
       - name: Build everything
@@ -20,11 +21,7 @@ workflows:
           npm run build
           npx cap sync ios
           cd ios/App && pod install
-          
-          # Simple build
-          xcode-project build-ipa \
-            --workspace "App.xcworkspace" \
-            --scheme "App"
+          xcode-project build-ipa --workspace "App.xcworkspace" --scheme "App"
 
     artifacts:
       - build/ios/ipa/*.ipa
