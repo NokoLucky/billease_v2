@@ -7,9 +7,6 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
-      
-      integrations:
-        app_store_connect: "personal-apple-account"  
 
     scripts:
       - name: Install dependencies
@@ -44,5 +41,7 @@ workflows:
 
     publishing:
       app_store_connect:
-        # This will inherit from the integration above
+        api_key: $APPSTORE_CONNECT_PRIVATE_KEY
+        key_id: $APPSTORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
