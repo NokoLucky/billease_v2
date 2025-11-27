@@ -1,0 +1,57 @@
+workflows:
+  ios_testflight:
+    name: iOS TestFlight (Next.js + Capacitor)
+    max_build_duration: 120
+    environment:
+      node: "18"
+      vars:
+        APPLE_ID: your.apple@id.com
+        APPLE_KEY_ID: $APP_STORE_KEY_ID
+        APPLE_ISSUER_ID: $APP_STORE_ISSUER_ID
+        APPLE_PRIVATE_KEY: $APP_STORE_PRIVATE_KEY
+      ios_signing:
+        distribution_type: app-store
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+
+      - name: Build web assets (Next.js)
+        script: |
+          npm run build
+
+      - name: Copy web build to capacitor (sync)
+        script: |
+          npx cap sync ios
+
+      - name: CocoaPods install
+        script: |
+          cd ios/App || exit 1
+          pod install --repo-update
+          cd $CM_PROJECT_DIR
+
+      - name: Archive with xcodebuild
+        script: |
+          set -e
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath $CM_BUILD_DIR/build/App.xcarchive archive
+
+          xcodebuild -exportArchive \
+            -archivePath $CM_BUILD_DIR/build/App.xcarchive \
+            -exportPath $CM_BUILD_DIR/build \
+            -exportOptionsPlist $CM_PROJECT_DIR/export-options.plist
+
+      - name: Collect artifacts
+        script: |
+          ls -la $CM_BUILD_DIR/build
+
+    artifacts:
+      - $CM_BUILD_DIR/build/*.ipa
+
+    publishing:
+      app_store_connect:
+        apple_id: $APPLE_ID
+        submit_to_testflight: true
