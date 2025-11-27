@@ -7,9 +7,6 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
-      
-      integrations:
-        app_store_connect: personal-apple-account
 
     scripts:
       - name: Build everything
@@ -19,14 +16,43 @@ workflows:
           npx cap sync ios
           cd ios/App && pod install
           
-          # Use the correct path and let integration handle signing
+          # Check if export-options.plist exists and copy it
+          if [ -f "$CM_PROJECT_DIR/export-options.plist" ]; then
+            echo "Copying export-options.plist to current directory"
+            cp "$CM_PROJECT_DIR/export-options.plist" ./export-options.plist
+          else
+            echo "export-options.plist not found at $CM_PROJECT_DIR/export-options.plist"
+            echo "Creating a basic one..."
+            cat > ./export-options.plist << EOF
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+                <key>method</key>
+                <string>app-store</string>
+                <key>teamID</key>
+                <string>UNC2YV5NU9</string>
+                <key>uploadBitcode</key>
+                <true/>
+                <key>uploadSymbols</key>
+                <true/>
+            </dict>
+            </plist>
+            EOF
+                      fi
+          
+          # Build with local export-options.plist
           xcode-project build-ipa \
             --workspace "App.xcworkspace" \
-            --scheme "App"
+            --scheme "App" \
+            --export-options-plist ./export-options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
+        api_key: $APPSTORE_CONNECT_PRIVATE_KEY
+        key_id: $APPSTORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
