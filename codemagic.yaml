@@ -2,56 +2,64 @@ workflows:
   ios_testflight:
     name: iOS TestFlight (Next.js + Capacitor)
     max_build_duration: 120
+
     environment:
       node: "18"
+      cocoapods: default
       vars:
-        APPLE_ID: your.apple@id.com
-        APPLE_KEY_ID: $APP_STORE_KEY_ID
-        APPLE_ISSUER_ID: $APP_STORE_ISSUER_ID
-        APPLE_PRIVATE_KEY: $APP_STORE_PRIVATE_KEY
+        APPLE_ID: nokolucky19@gmail.com
+        APPLE_KEY_ID: $APPSTORE_CONNECT_KEY_ID
+        APPLE_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
+        APPLE_PRIVATE_KEY: $APPSTORE_CONNECT_PRIVATE_KEY
+
       ios_signing:
         distribution_type: app-store
+
     scripts:
       - name: Install dependencies
         script: |
           npm ci
 
-      - name: Build web assets (Next.js)
+      - name: Build Next.js web assets
         script: |
           npm run build
 
-      - name: Copy web build to capacitor (sync)
+      - name: Sync Capacitor iOS
         script: |
           npx cap sync ios
 
-      - name: CocoaPods install
+      - name: Install CocoaPods
         script: |
-          cd ios/App || exit 1
+          cd ios/App
           pod install --repo-update
-          cd $CM_PROJECT_DIR
+          cd ../..
 
-      - name: Archive with xcodebuild
+      - name: Archive iOS build with Xcode
         script: |
           set -e
           cd ios/App
+
+          # Archive
           xcodebuild -workspace App.xcworkspace \
             -scheme App \
+            -sdk iphoneos \
             -configuration Release \
-            -archivePath $CM_BUILD_DIR/build/App.xcarchive archive
+            -archivePath $CM_BUILD_DIR/App.xcarchive archive
 
+          # Export IPA
           xcodebuild -exportArchive \
-            -archivePath $CM_BUILD_DIR/build/App.xcarchive \
-            -exportPath $CM_BUILD_DIR/build \
+            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            -exportPath $CM_BUILD_DIR/ipa \
             -exportOptionsPlist $CM_PROJECT_DIR/export-options.plist
 
-      - name: Collect artifacts
-        script: |
-          ls -la $CM_BUILD_DIR/build
-
     artifacts:
-      - $CM_BUILD_DIR/build/*.ipa
+      - $CM_BUILD_DIR/ipa/*.ipa
 
     publishing:
       app_store_connect:
+        api_key: $APPLE_PRIVATE_KEY
+        key_id: $APPLE_KEY_ID
+        issuer_id: $APPLE_ISSUER_ID
         apple_id: $APPLE_ID
         submit_to_testflight: true
+        ipa: $CM_BUILD_DIR/ipa/*.ipa
