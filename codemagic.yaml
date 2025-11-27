@@ -7,11 +7,6 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
-      
-      # Use Codemagic's automatic code signing
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.billease.app.UNC2YV5NU9
 
     scripts:
       - name: Install dependencies
@@ -31,14 +26,31 @@ workflows:
           cd ios/App
           pod install
 
-      - name: Build IPA
+      - name: Build with automatic provisioning
         script: |
-          xcode-project build-ipa \
-            --workspace "ios/App/App.xcworkspace" \
-            --scheme "App"
+          cd ios/App
+          
+          # Archive with automatic provisioning
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            -allowProvisioningUpdates \
+            -allowProvisioningDeviceRegistration
+
+      - name: Export IPA
+        script: |
+          cd ios/App
+          
+          xcodebuild -exportArchive \
+            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            -exportPath $CM_BUILD_DIR/ipa \
+            -exportOptionsPlist $CM_PROJECT_DIR/export-options.plist \
+            -allowProvisioningUpdates
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - $CM_BUILD_DIR/ipa/*.ipa
 
     publishing:
       app_store_connect:
