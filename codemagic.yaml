@@ -9,16 +9,12 @@ workflows:
       xcode: latest
 
     scripts:
-      - name: Build web app
+      - name: Build everything
         script: |
           npm ci
           npm run build
           npx cap sync ios
-
-      - name: Build iOS app
-        script: |
-          cd ios/App
-          pod install
+          cd ios/App && pod install
           
           # Create export-options.plist
           cat > export_options.plist << 'EOF'
@@ -34,26 +30,18 @@ workflows:
           </plist>
           EOF
           
-          # Use absolute paths with CM_BUILD_DIR
-          xcodebuild archive \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -archivePath $CM_BUILD_DIR/App.xcarchive \
-            -allowProvisioningUpdates
-
-          xcodebuild -exportArchive \
-            -archivePath $CM_BUILD_DIR/App.xcarchive \
-            -exportPath $CM_BUILD_DIR/ipa \
-            -exportOptionsPlist export_options.plist \
-            -allowProvisioningUpdates
+          # Use xcode-project with the local export_options.plist
+          xcode-project build-ipa \
+            --workspace "App.xcworkspace" \
+            --scheme "App" \
+            --export-options-plist ./export_options.plist
 
     artifacts:
-      - $CM_BUILD_DIR/ipa/*.ipa
+      - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
         api_key: $APPSTORE_CONNECT_PRIVATE_KEY
-        key_id: $APPSTORE_CONNECT_KEY_ID
+        key_key: $APPSTORE_CONNECT_KEY_ID
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
