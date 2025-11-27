@@ -16,7 +16,10 @@ workflows:
           npx cap sync ios
           cd ios/App && pod install
           
-          # Simple build - let Codemagic handle everything
+          # First set up code signing profiles
+          xcode-project use-profiles
+          
+          # Then build IPA - it should auto-generate export options
           xcode-project build-ipa \
             --workspace "App.xcworkspace" \
             --scheme "App"
