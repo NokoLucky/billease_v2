@@ -8,8 +8,9 @@ workflows:
       cocoapods: default
       xcode: latest
       
-      vars:
-        APP_STORE_CONNECT_TEAM_ID: "UNC2YV5NU9" 
+      # Reference your integration (use the name you gave it)
+      integrations:
+        app_store_connect: personal-apple-account  # Use your integration name here
 
     scripts:
       - name: Install dependencies
@@ -29,34 +30,15 @@ workflows:
           cd ios/App
           pod install
 
-      - name: Build and archive with team ID
+      - name: Build IPA with integration
         script: |
-          cd ios/App
-          
-          xcodebuild archive \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -archivePath $CM_BUILD_DIR/build/App.xcarchive \
-            -allowProvisioningUpdates \
-            DEVELOPMENT_TEAM=$APP_STORE_CONNECT_TEAM_ID
-
-      - name: Export IPA
-        script: |
-          cd ios/App
-          
-          xcodebuild -exportArchive \
-            -archivePath $CM_BUILD_DIR/build/App.xcarchive \
-            -exportPath $CM_BUILD_DIR/build/ipa \
-            -exportOptionsPlist $CM_PROJECT_DIR/export-options.plist \
-            -allowProvisioningUpdates
+          xcode-project build-ipa \
+            --project "ios/App/App.xcworkspace" \
+            --scheme "App"
 
     artifacts:
-      - $CM_BUILD_DIR/build/ipa/*.ipa
+      - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
-        api_key: $APPSTORE_CONNECT_PRIVATE_KEY
-        key_id: $APPSTORE_CONNECT_KEY_ID
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
