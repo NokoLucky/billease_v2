@@ -9,44 +9,18 @@ workflows:
       xcode: latest
 
     scripts:
-      - name: Build web app
+      - name: Build everything
         script: |
           npm ci
           npm run build
           npx cap sync ios
-
-      - name: Build iOS app
-        script: |
-          cd ios/App
-          pod install
+          cd ios/App && pod install
           
-          # Create simple export-options.plist
-          cat > export-options.plist << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-              <key>teamID</key>
-              <string>UNC2YV5NU9</string>
-          </dict>
-          </plist>
-          EOF
-          
-          # Build with manual commands
-          xcodebuild archive \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -archivePath build/App.xcarchive \
-            -allowProvisioningUpdates
-
-          xcodebuild -exportArchive \
-            -archivePath build/App.xcarchive \
-            -exportPath build/ipa \
-            -exportOptionsPlist export-options.plist \
-            -allowProvisioningUpdates
+          # Use xcode-project without any export options
+          xcode-project build-ipa \
+            --workspace "App.xcworkspace" \
+            --scheme "App" \
+            --output-dir "./build/ipa"
 
     artifacts:
       - ios/App/build/ipa/*.ipa
