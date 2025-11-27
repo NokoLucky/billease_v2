@@ -6,6 +6,7 @@ workflows:
     environment:
       node: "18"
       cocoapods: default
+
       vars:
         APPLE_ID: nokolucky19@gmail.com
         APPLE_KEY_ID: $APPSTORE_CONNECT_KEY_ID
@@ -14,6 +15,7 @@ workflows:
 
       ios_signing:
         distribution_type: app-store
+        bundle_identifier: com.billease.app.UNC2YV5NU9
 
     scripts:
       - name: Install dependencies
@@ -39,14 +41,12 @@ workflows:
           set -e
           cd ios/App
 
-          # Archive
           xcodebuild -workspace App.xcworkspace \
             -scheme App \
             -sdk iphoneos \
             -configuration Release \
             -archivePath $CM_BUILD_DIR/App.xcarchive archive
 
-          # Export IPA
           xcodebuild -exportArchive \
             -archivePath $CM_BUILD_DIR/App.xcarchive \
             -exportPath $CM_BUILD_DIR/ipa \
@@ -62,4 +62,3 @@ workflows:
         issuer_id: $APPLE_ISSUER_ID
         apple_id: $APPLE_ID
         submit_to_testflight: true
-        ipa: $CM_BUILD_DIR/ipa/*.ipa
