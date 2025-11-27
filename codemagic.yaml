@@ -1,6 +1,6 @@
 workflows:
   ios_testflight:
-    name: iOS TestFlight (Next.js + Capacitor)
+    name: iOS TestFlight
     max_build_duration: 120
 
     environment:
@@ -9,7 +9,6 @@ workflows:
       xcode: latest
 
       vars:
-        APPLE_ID: "nokolucky19@gmail.com"
         BUNDLE_ID: "com.billease.app.UNC2YV5NU9"
 
       ios_signing:
@@ -21,44 +20,27 @@ workflows:
         script: |
           npm ci
 
-      - name: Build Next.js web assets
+      - name: Build Next.js
         script: |
           npm run build
 
-      - name: Sync Capacitor iOS
+      - name: Sync Capacitor
         script: |
           npx cap sync ios
 
       - name: Install CocoaPods
         script: |
           cd ios/App
-          pod install --repo-update
-          cd ../..
+          pod install
 
-      - name: Set up code signing certificates
+      - name: Build iOS IPA
         script: |
-          # Codemagic automatically sets up certificates based on ios_signing configuration
-          keychain initialize
-
-      - name: Archive iOS build with Xcode
-        script: |
-          set -e
-          cd ios/App
-
-          xcodebuild -workspace App.xcworkspace \
-            -scheme App \
-            -sdk iphoneos \
-            -configuration Release \
-            -archivePath $CM_BUILD_DIR/App.xcarchive \
-            archive
-
-          xcodebuild -exportArchive \
-            -archivePath $CM_BUILD_DIR/App.xcarchive \
-            -exportPath $CM_BUILD_DIR/ipa \
-            -exportOptionsPlist $CM_PROJECT_DIR/export-options.plist
-
+          xcode-project build-ipa \
+            --project "ios/App/App.xcworkspace" \
+            --scheme "App"
+            
     artifacts:
-      - $CM_BUILD_DIR/ipa/*.ipa
+      - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
