@@ -1,27 +1,41 @@
 workflows:
   ios_testflight:
-    name: iOS TestFlight
+    name: iOS TestFlight Debug
     max_build_duration: 120
 
     environment:
       node: 18
       cocoapods: default
       xcode: latest
-      
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.billease.app.UNC2YV5NU9
-        # Force certificate generation
-        certificate: $APP_STORE_CERTIFICATE_PRIVATE_KEY
 
     scripts:
-      - name: Build everything
+      - name: Debug information
+        script: |
+          echo "=== Debug Info ==="
+          echo "Bundle ID: com.billease.app.UNC2YV5NU9"
+          echo "Team ID: UNC2YV5NU9"
+          echo "Current directory:"
+          pwd
+          ls -la
+          
+          # Check if we can list available profiles
+          cd ios/App
+          echo "=== Available signing identities ==="
+          security find-identity -v -p codesigning || echo "No identities found"
+          
+          echo "=== Trying to use profiles ==="
+          xcode-project use-profiles --verbose || echo "use-profiles failed"
+
+      - name: Build app
         script: |
           npm ci
           npm run build
           npx cap sync ios
           cd ios/App && pod install
-          xcode-project build-ipa --workspace "App.xcworkspace" --scheme "App"
+          
+          # Try building with different approaches
+          echo "=== Attempting build ==="
+          xcode-project build-ipa --workspace "App.xcworkspace" --scheme "App" --verbose
 
     artifacts:
       - build/ios/ipa/*.ipa
