@@ -7,28 +7,33 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
+      
+      integrations:
+        app_store_connect: personal-apple-account
 
     scripts:
-      - name: Build everything
+      - name: Set up code signing first
+        script: |
+          cd ios/App
+          xcode-project use-profiles
+
+      - name: Build web app
         script: |
           npm ci
           npm run build
           npx cap sync ios
           cd ios/App && pod install
-          
-          # Build with team ID directly in command
+
+      - name: Build IPA
+        script: |
+          cd ios/App
           xcode-project build-ipa \
             --workspace "App.xcworkspace" \
-            --scheme "App" \
-            --export-options-plist $CM_PROJECT_DIR/export-options.plist \
-            --archive-flags "DEVELOPMENT_TEAM=UNC2YV5NU9 -allowProvisioningUpdates"
+            --scheme "App"
 
     artifacts:
       - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
-        api_key: $APPSTORE_CONNECT_PRIVATE_KEY
-        key_id: $APPSTORE_CONNECT_KEY_ID
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
