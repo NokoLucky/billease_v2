@@ -1,4 +1,4 @@
-name: iOS Fastlane Build
+name: iOS Fastlane Simple
 
 on:
   push:
@@ -36,127 +36,149 @@ jobs:
         cd ios/App
         pod install
     
-    - name: Setup Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: '3.1'
-        bundler-cache: true
+    - name: Install Fastlane
+      run: |
+        sudo gem install fastlane --no-document
     
-    - name: Setup Fastlane
+    - name: Setup API Key for Fastlane
       run: |
         cd ios
-        gem install fastlane
         
-        # Create fastlane directory structure if it doesn't exist
+        # Create fastlane directory
         mkdir -p fastlane
         
-        # Create Fastfile if not exists
-        if [ ! -f fastlane/Fastfile ]; then
-          cat > fastlane/Fastfile << 'EOF'
-          default_platform(:ios)
+        # Create the API key JSON file
+        cat > fastlane/api_key.json << EOF
+        {
+          "key_id": "${{ secrets.APPSTORE_CONNECT_KEY_ID }}",
+          "issuer_id": "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}",
+          "key": "${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}",
+          "duration": 1200,
+          "in_house": false
+        }
+        EOF
+        
+        # Create a minimal Fastfile
+        cat > fastlane/Fastfile << 'EOF'
+        default_platform(:ios)
 
-          platform :ios do
-            desc "Build and upload to TestFlight"
-            lane :beta do
-              # Build the app
-              build_app(
-                workspace: "App.xcworkspace",
-                scheme: "App",
-                clean: true,
-                export_method: "app-store",
-                output_directory: "./build"
-              )
-              
-              # Upload to TestFlight
-              upload_to_testflight(
-                skip_waiting_for_build_processing: true
-              )
-            end
+        platform :ios do
+          desc "Build and upload to TestFlight"
+          lane :beta do
+            # Build the IPA
+            gym(
+              workspace: "App.xcworkspace",
+              scheme: "App",
+              clean: true,
+              export_method: "app-store",
+              output_directory: "./build",
+              silent: true
+            )
             
-            desc "Just build for testing"
-            lane :build_only do
-              build_app(
-                workspace: "App.xcworkspace",
-                scheme: "App",
-                clean: true,
-                export_method: "app-store",
-                output_directory: "./build"
-              )
-            end
+            # Upload using API key
+            pilot(
+              api_key_path: "./fastlane/api_key.json",
+              skip_waiting_for_build_processing: true
+            )
           end
-          EOF
+          
+          desc "Build only (test)"
+          lane :build do
+            gym(
+              workspace: "App.xcworkspace",
+              scheme: "App",
+              clean: true,
+              export_method: "app-store",
+              output_directory: "./build",
+              silent: true
+            )
+          end
+        end
+        EOF
+        
+        # Create Appfile
+        cat > fastlane/Appfile << EOF
+        app_identifier("com.billease.app.UNC2YV5NU9")
+        team_id("${{ secrets.APPSTORE_CONNECT_TEAM_ID }}")
+        EOF
+    
+    - name: Import Signing Certificates
+      run: |
+        # Create keychain
+        security create-keychain -p "" build.keychain
+        security default-keychain -s build.keychain
+        security unlock-keychain -p "" build.keychain
+        
+        # Import certificate if provided
+        if [ -n "${{ secrets.IOS_P12_BASE64 }}" ]; then
+          echo "${{ secrets.IOS_P12_BASE64 }}" | base64 --decode > certificate.p12
+          security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_P12_PASSWORD }}" -T /usr/bin/codesign
         fi
         
-        # Create Appfile if not exists
-        if [ ! -f fastlane/Appfile ]; then
-          cat > fastlane/Appfile << EOF
-          app_identifier("com.billease.app.UNC2YV5NU9")
-          apple_id("${{ secrets.APPLE_ID }}")
-          team_id("${{ secrets.APPSTORE_CONNECT_TEAM_ID }}")
-          EOF
+        # Set keychain settings
+        security set-keychain-settings build.keychain
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
+        
+        # Install provisioning profile
+        if [ -n "${{ secrets.IOS_PROVISIONING_BASE64 }}" ]; then
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "${{ secrets.IOS_PROVISIONING_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision
         fi
     
-    - name: Import Code Signing
-      uses: apple-actions/import-codesign-certs@v2
-      with:
-        p12-file-base64: ${{ secrets.IOS_P12_BASE64 }}
-        p12-password: ${{ secrets.IOS_P12_PASSWORD }}
-    
-    - name: Install Provisioning Profile
-      run: |
-        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-        echo "${{ secrets.IOS_PROVISIONING_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision
-    
-    - name: Set up Match (Optional but recommended for future)
-      if: false  # Disabled for now, but useful for proper signing management
+    - name: Try Simple Build First
       run: |
         cd ios
-        fastlane match init
+        
+        # First, just try to build without uploading
+        echo "=== Attempting simple build ==="
+        
+        # Use xcodebuild directly as a test
+        cd App
+        xcodebuild -showBuildSettings -workspace App.xcworkspace -scheme App
+        
+        # Try a clean
+        xcodebuild clean -workspace App.xcworkspace -scheme App
+        
+        echo "=== Simple build test complete ==="
     
-    - name: Run Fastlane Beta
+    - name: Run Fastlane Build (Test)
       env:
-        # App Store Connect API Key (Recommended method)
-        APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
-        APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
-        APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
-        APP_STORE_CONNECT_API_KEY_KEY_CONTENT: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
-        
-        # Alternative: Apple ID credentials
-        FASTLANE_USER: ${{ secrets.APPLE_ID }}
-        FASTLANE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-        FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-        
-        # Team ID
-        FASTLANE_TEAM_ID: ${{ secrets.APPSTORE_CONNECT_TEAM_ID }}
-        
-        # Skip prompts
-        FASTLANE_SKIP_UPDATE_CHECK: "true"
-        FASTLANE_HIDE_CHANGELOG: "true"
-        
-        # Optional: For 2FA
-        SPACESHIP_2FA_SMS_DEFAULT_PHONE_NUMBER: ${{ secrets.APPLE_PHONE_NUMBER }}
+        FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: 120
+        FASTLANE_XCODEBUILD_SETTINGS_RETRIES: 20
+        FASTLANE_SKIP_UPDATE_CHECK: true
+        FASTLANE_HIDE_CHANGELOG: true
       run: |
         cd ios
         
-        # First try with API key (recommended)
-        echo "Building with Fastlane..."
+        echo "=== Running Fastlane build only ==="
         
-        # Create a temporary key file for App Store Connect API
-        if [ -n "$APP_STORE_CONNECT_API_KEY_KEY" ]; then
-          echo "$APP_STORE_CONNECT_API_KEY_KEY" > /tmp/AuthKey_$APP_STORE_CONNECT_API_KEY_KEY_ID.p8
-          export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="/tmp/AuthKey_$APP_STORE_CONNECT_API_KEY_KEY_ID.p8"
-        fi
+        # First try just building
+        fastlane build || echo "Build failed, continuing to debug"
         
-        # Run fastlane
-        fastlane beta
-        
-        # If above fails, try with just build
-        # fastlane build_only
+        # List any generated files
+        ls -la build/ || echo "No build directory"
     
-    - name: Upload IPA as artifact
+    - name: Run Fastlane Beta (Full)
+      if: success() || failure()  # Run even if previous step fails
+      env:
+        FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: 120
+        FASTLANE_XCODEBUILD_SETTINGS_RETRIES: 20
+        FASTLANE_SKIP_UPDATE_CHECK: true
+        FASTLANE_HIDE_CHANGELOG: true
+      run: |
+        cd ios
+        
+        echo "=== Running full Fastlane beta lane ==="
+        
+        # Run with verbose output
+        fastlane beta --verbose
+    
+    - name: Upload Build Artifacts
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: iOS-IPA-Fastlane
-        path: ios/build/*.ipa
+        name: iOS-Build-Results
+        path: |
+          ios/build/
+          ios/fastlane/logs/
         retention-days: 7
