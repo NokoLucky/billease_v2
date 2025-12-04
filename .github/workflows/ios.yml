@@ -42,107 +42,79 @@ jobs:
         p12-file-base64: ${{ secrets.IOS_P12_BASE64 }}
         p12-password: ${{ secrets.IOS_P12_PASSWORD }}
     
-    - name: Install and Extract Provisioning Profile
+    - name: Install and Analyze Provisioning Profile
+      id: profile_info
       run: |
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
         
         # Decode and save provisioning profile
         echo "${{ secrets.IOS_PROVISIONING_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision
         
-        # Extract UUID using multiple methods
         PROFILE_PATH=~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision
         
-        # Method 1: grep for UUID
-        UUID=$(grep -a -A1 UUID "$PROFILE_PATH" | grep -o "[-a-zA-Z0-9]\{36\}" || echo "")
-        
+        # Extract UUID
+        UUID=$(security cms -D -i "$PROFILE_PATH" 2>/dev/null | grep -o '"UUID" : "[^"]*"' | cut -d'"' -f4 || echo "")
         if [ -z "$UUID" ]; then
-          # Method 2: Use security command to parse the profile
-          UUID=$(security cms -D -i "$PROFILE_PATH" 2>/dev/null | grep -o '"UUID" : "[^"]*"' | cut -d'"' -f4 || echo "")
+          UUID=$(grep -a -A1 UUID "$PROFILE_PATH" | grep -o "[-a-zA-Z0-9]\{36\}" || echo "")
         fi
         
-        if [ -z "$UUID" ]; then
-          # Method 3: Look for UUID in the binary
-          UUID=$(strings "$PROFILE_PATH" | grep -i "uuid" | head -1 | grep -o "[-a-zA-Z0-9]\{36\}" || echo "")
-        fi
+        echo "uuid=$UUID" >> $GITHUB_OUTPUT
         
-        echo "PROVISIONING_PROFILE_UUID=$UUID" >> $GITHUB_ENV
+        # Extract Profile Name
+        PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" 2>/dev/null | grep -o '"Name" : "[^"]*"' | cut -d'"' -f4 || echo "")
+        echo "profile_name=$PROFILE_NAME" >> $GITHUB_OUTPUT
+        
+        # Extract Team ID from profile
+        PROFILE_TEAM_ID=$(security cms -D -i "$PROFILE_PATH" 2>/dev/null | grep -o '"com.apple.developer.team-identifier" : "\([^"]*\)"' | cut -d'"' -f4 || echo "")
+        echo "profile_team_id=$PROFILE_TEAM_ID" >> $GITHUB_OUTPUT
+        
+        # Extract App ID
+        APP_ID=$(security cms -D -i "$PROFILE_PATH" 2>/dev/null | grep -o '"application-identifier" : "[^"]*"' | cut -d'"' -f4 || echo "")
+        echo "app_id=$APP_ID" >> $GITHUB_OUTPUT
+        
         echo "Provisioning Profile UUID: $UUID"
+        echo "Provisioning Profile Name: $PROFILE_NAME"
+        echo "Team ID from profile: $PROFILE_TEAM_ID"
+        echo "App ID from profile: $APP_ID"
         
-        # Verify the UUID looks correct
-        if [[ ! $UUID =~ ^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$ ]]; then
-          echo "Warning: UUID format may be incorrect: $UUID"
-        fi
+        # Copy the profile with UUID as filename (Xcode prefers this)
+        cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
     
-    - name: Patch Project with Provisioning Profile (Python Method)
+    - name: Clean Project Settings
       run: |
         cd ios/App
         
-        echo "Patching project with provisioning profile UUID: $PROVISIONING_PROFILE_UUID"
+        echo "Cleaning project settings..."
         
-        # Use Python for reliable string manipulation
+        # Remove all provisioning-related settings to start fresh
         python3 << 'EOF'
         import re
-        import sys
 
-        # Read the project file
         with open('App.xcodeproj/project.pbxproj', 'r') as f:
             content = f.read()
 
-        team_id = "${{ secrets.APPSTORE_CONNECT_TEAM_ID }}"
-        profile_uuid = "$PROVISIONING_PROFILE_UUID"
+        # Remove all PROVISIONING_PROFILE and PROVISIONING_PROFILE_SPECIFIER lines
+        content = re.sub(r'\t\t\t\tPROVISIONING_PROFILE = .*?;\n', '', content)
+        content = re.sub(r'\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = .*?;\n', '', content)
 
-        # Update Release configuration
-        release_pattern = r'(504EC3181FED79650016851F \/\* Release \*\/ = \{.*?buildSettings = \{)(.*?)(\};.*?\};)'
-        release_match = re.search(release_pattern, content, re.DOTALL)
+        # Ensure CODE_SIGN_STYLE is Manual
+        content = content.replace('CODE_SIGN_STYLE = Automatic;', 'CODE_SIGN_STYLE = Manual;')
 
-        if release_match:
-            build_settings = release_match.group(2)
-    
-        # Remove any existing PROVISIONING_PROFILE lines
-        build_settings = re.sub(r'\t\t\t\tPROVISIONING_PROFILE = .*?;\n', '', build_settings)
-        build_settings = re.sub(r'\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = .*?;\n', '', build_settings)
-        
-        # Find where to insert - after DEVELOPMENT_TEAM line
-        if 'DEVELOPMENT_TEAM = ' in build_settings:
-            # Insert after DEVELOPMENT_TEAM
-            build_settings = re.sub(
-                r'(DEVELOPMENT_TEAM = "[^"]+";)',
-                r'\1\n\t\t\t\tPROVISIONING_PROFILE = "' + profile_uuid + '";\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "iOS Distribution";',
-                build_settings
-            )
-        else:
-            # Insert before CODE_SIGN_STYLE
-            build_settings = re.sub(
-                r'(CODE_SIGN_STYLE = Manual;)',
-                r'PROVISIONING_PROFILE = "' + profile_uuid + '";\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "iOS Distribution";\n\t\t\t\t\1',
-                build_settings
-            )
-        
-        # Update the content
-        new_section = release_match.group(1) + build_settings + release_match.group(3)
-        content = content[:release_match.start()] + new_section + content[release_match.end():]
-
-        # Write the updated content
         with open('App.xcodeproj/project.pbxproj', 'w') as f:
             f.write(content)
 
-        print("✓ Project patched with provisioning profile")
+        print("✓ Project settings cleaned")
         EOF
     
-    - name: Debug - Show Patched Configuration
-      run: |
-        cd ios/App
-        echo "=== Patched Release Configuration ==="
-        # Extract just the Release build settings
-        awk '/504EC3181FED79650016851F \/\* Release \*\// {flag=1} flag && /^[[:space:]]*};/ {print; flag=0} flag' App.xcodeproj/project.pbxproj | grep -A 20 "buildSettings"
-    
-    - name: Build and Archive
+    - name: Build Archive with UUID Reference
       run: |
         cd ios/App
         
-        echo "Building archive with provisioning profile..."
+        echo "Building with explicit profile UUID..."
+        echo "Profile UUID: ${{ steps.profile_info.outputs.uuid }}"
+        echo "Profile Name: ${{ steps.profile_info.outputs.profile_name }}"
         
-        # Build with explicit settings
+        # Option 1: Build using the UUID directly
         xcodebuild archive \
           -project App.xcodeproj \
           -scheme App \
@@ -152,9 +124,47 @@ jobs:
           DEVELOPMENT_TEAM="${{ secrets.APPSTORE_CONNECT_TEAM_ID }}" \
           CODE_SIGN_STYLE="Manual" \
           CODE_SIGN_IDENTITY="iPhone Distribution" \
+          PROVISIONING_PROFILE="${{ steps.profile_info.outputs.uuid }}" \
           -allowProvisioningUpdates
         
         echo "✓ Archive created"
+    
+    - name: Build Archive - Alternative (if above fails)
+      if: failure()
+      run: |
+        cd ios/App
+        
+        echo "Trying alternative build method..."
+        
+        # Option 2: Let Xcode auto-select the profile
+        xcodebuild archive \
+          -project App.xcodeproj \
+          -scheme App \
+          -destination 'generic/platform=iOS' \
+          -configuration Release \
+          -archivePath "$RUNNER_TEMP/App.xcarchive" \
+          DEVELOPMENT_TEAM="${{ secrets.APPSTORE_CONNECT_TEAM_ID }}" \
+          CODE_SIGN_STYLE="Manual" \
+          -allowProvisioningUpdates
+        
+        echo "✓ Archive created (alternative method)"
+    
+    - name: Build Archive - Simple (if both above fail)
+      if: failure()
+      run: |
+        cd ios/App
+        
+        echo "Trying simple build method..."
+        
+        # Option 3: Just let Xcode handle everything
+        xcodebuild archive \
+          -project App.xcodeproj \
+          -scheme App \
+          -destination 'generic/platform=iOS' \
+          -archivePath "$RUNNER_TEMP/App.xcarchive" \
+          -allowProvisioningUpdates
+        
+        echo "✓ Archive created (simple method)"
     
     - name: Create Export Options
       run: |
@@ -170,14 +180,13 @@ jobs:
             <string>app-store</string>
             <key>teamID</key>
             <string>${{ secrets.APPSTORE_CONNECT_TEAM_ID }}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+                <key>com.billease.app.UNC2YV5NU9</key>
+                <string>${{ steps.profile_info.outputs.uuid }}</string>
+            </dict>
             <key>signingStyle</key>
             <string>manual</string>
-            <key>stripSwiftSymbols</key>
-            <true/>
-            <key>uploadBitcode</key>
-            <false/>
-            <key>uploadSymbols</key>
-            <true/>
         </dict>
         </plist>
         EOF
