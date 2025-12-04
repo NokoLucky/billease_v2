@@ -8,33 +8,29 @@ workflows:
       cocoapods: default
       xcode: latest
 
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.billease.app
+        certificate: $IOS_CERTIFICATE   # .p12 (base64)
+        certificate_password: $IOS_CERTIFICATE_PASSWORD
+        provisioning_profile: $IOS_PROVISIONING_PROFILE  # .mobileprovision (base64)
+
     scripts:
-      - name: Build everything
+      - name: Install & Build
         script: |
           npm ci
           npm run build
           npx cap sync ios
           cd ios/App && pod install
-          
-          # Create export-options.plist
-          cat > export_options.plist << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>app-store</string>
-              <key>teamID</key>
-              <string>UNC2YV5NU9</string>
-          </dict>
-          </plist>
-          EOF
-          
-          # Use xcode-project with the local export_options.plist
+          cd ..
+
+      - name: Build IPA
+        script: |
           xcode-project build-ipa \
             --workspace "App.xcworkspace" \
             --scheme "App" \
-            --export-options-plist ./export_options.plist
+            --archive-path $CM_BUILD_DIR/App.xcarchive \
+            --export-method app-store
 
     artifacts:
       - build/ios/ipa/*.ipa
