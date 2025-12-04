@@ -46,31 +46,63 @@ jobs:
       run: |
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
         echo "${{ secrets.IOS_PROVISIONING_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision
+        
+        # Get the UUID from the provisioning profile
+        UUID=$(grep -a -A1 UUID ~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision | grep -o "[-a-zA-Z0-9]\{36\}" || echo "")
+        if [ -z "$UUID" ]; then
+          # Try another method
+          UUID=$(grep -o '<key>UUID</key>.*<string>[-a-zA-Z0-9]\{36\}</string>' ~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision | grep -o "[-a-zA-Z0-9]\{36\}" || echo "")
+        fi
+        echo "PROVISIONING_PROFILE_UUID=$UUID" >> $GITHUB_ENV
+        echo "Provisioning Profile UUID: $UUID"
     
-    - name: Debug - Check Project Settings
-      run: |
-        cd ios/App
-        echo "=== Checking project.pbxproj ==="
-        grep -n "DEVELOPMENT_TEAM" App.xcodeproj/project.pbxproj || echo "DEVELOPMENT_TEAM not found"
-        grep -n "CODE_SIGN_STYLE" App.xcodeproj/project.pbxproj || echo "CODE_SIGN_STYLE not found"
-        echo "=== Checking Team ID secret ==="
-        echo "Team ID length: ${#APPSTORE_CONNECT_TEAM_ID}"
-        echo "Team ID: ${APPSTORE_CONNECT_TEAM_ID}"
-      env:
-        APPSTORE_CONNECT_TEAM_ID: ${{ secrets.APPSTORE_CONNECT_TEAM_ID }}
-    
-    - name: Build and Archive (Auto Signing)
+    - name: Patch Project with Provisioning Profile
       run: |
         cd ios/App
         
-        # Use automatic signing with -allowProvisioningUpdates
-        # This lets Xcode handle all the signing automatically
+        echo "Patching project with provisioning profile UUID: $PROVISIONING_PROFILE_UUID"
+        
+        # Update project.pbxproj to include PROVISIONING_PROFILE
+        # This fixes the "requires a provisioning profile" error
+        
+        # Use sed to add provisioning profile to Release configuration
+        sed -i '' "/504EC3181FED79650016851F \/\* Release \*\//,/^[[:space:]]*};/ {
+            /DEVELOPMENT_TEAM = \".*\";/a\
+        \t\t\t\tPROVISIONING_PROFILE = \"$PROVISIONING_PROFILE_UUID\";
+        }" App.xcodeproj/project.pbxproj
+        
+        # Also add PROVISIONING_PROFILE_SPECIFIER
+        sed -i '' "/504EC3181FED79650016851F \/\* Release \*\//,/^[[:space:]]*};/ {
+            /PROVISIONING_PROFILE = \".*\";/a\
+        \t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"iOS Distribution\";
+        }" App.xcodeproj/project.pbxproj
+        
+        echo "✓ Project patched with provisioning profile"
+    
+    - name: Debug - Check Updated Project
+      run: |
+        cd ios/App
+        echo "=== Updated Release Configuration ==="
+        sed -n '/504EC3181FED79650016851F \/\* Release \*\//,/^[[:space:]]*};/p' App.xcodeproj/project.pbxproj | grep -E "(PROVISIONING_PROFILE|PROVISIONING_PROFILE_SPECIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE)"
+    
+    - name: Build and Archive
+      run: |
+        cd ios/App
+        
+        echo "Building archive..."
+        
+        # Build with explicit provisioning profile
         xcodebuild archive \
           -project App.xcodeproj \
           -scheme App \
           -destination 'generic/platform=iOS' \
           -configuration Release \
           -archivePath "$RUNNER_TEMP/App.xcarchive" \
+          DEVELOPMENT_TEAM="${{ secrets.APPSTORE_CONNECT_TEAM_ID }}" \
+          PROVISIONING_PROFILE="$PROVISIONING_PROFILE_UUID" \
+          PROVISIONING_PROFILE_SPECIFIER="iOS Distribution" \
+          CODE_SIGN_IDENTITY="iPhone Distribution" \
+          CODE_SIGN_STYLE="Manual" \
           -allowProvisioningUpdates
         
         echo "✓ Archive created"
@@ -79,7 +111,7 @@ jobs:
       run: |
         cd ios/App
         
-        # Create exportOptions.plist
+        # Create exportOptions.plist with the provisioning profile
         cat > exportOptions.plist << EOF
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -89,8 +121,13 @@ jobs:
             <string>app-store</string>
             <key>teamID</key>
             <string>${{ secrets.APPSTORE_CONNECT_TEAM_ID }}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+                <key>com.billease.app.UNC2YV5NU9</key>
+                <string>$PROVISIONING_PROFILE_UUID</string>
+            </dict>
             <key>signingStyle</key>
-            <string>automatic</string>
+            <string>manual</string>
             <key>stripSwiftSymbols</key>
             <true/>
             <key>uploadBitcode</key>
@@ -107,7 +144,8 @@ jobs:
       run: |
         cd ios/App
         
-        # Export the IPA
+        echo "Exporting IPA..."
+        
         xcodebuild -exportArchive \
           -archivePath "$RUNNER_TEMP/App.xcarchive" \
           -exportPath "$RUNNER_TEMP/ipa" \
@@ -115,8 +153,6 @@ jobs:
           -allowProvisioningUpdates
         
         echo "✓ IPA exported"
-        
-        # Show the result
         ls -la "$RUNNER_TEMP/ipa/"
     
     - name: Upload to TestFlight
@@ -131,6 +167,5 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: iOS-IPA-Debug
+        name: iOS-IPA
         path: ${{ runner.temp }}/ipa/*.ipa
-        retention-days: 7
