@@ -14,13 +14,21 @@ workflows:
     scripts:
       - name: Build Next.js + Capacitor
         script: |
+          echo "Installing Node modules and building Next.js..."
           npm ci
           npm run build
+
+          echo "Syncing Capacitor iOS project..."
           npx cap sync ios
-          cd ios/App && pod install
-          cd ..
+
+          echo "Installing CocoaPods dependencies..."
+          cd ios/App
+          pod install
+          cd ../../
+
+          echo "Building IPA with Xcode..."
           xcode-project build-ipa \
-            --workspace "App.xcworkspace" \
+            --workspace "ios/App/App.xcworkspace" \
             --scheme "App" \
             --archive-path $CM_BUILD_DIR/App.xcarchive \
             --export-method app-store
