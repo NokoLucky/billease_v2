@@ -10,8 +10,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.billease.app.UNC2YV5NU9
-        certificate: "Billease"
-        provisioning_profile: "BillEase provisioning"
 
     scripts:
       - name: Build Next.js + Capacitor
