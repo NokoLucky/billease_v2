@@ -1,0 +1,162 @@
+name: iOS Fastlane Build
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install npm dependencies
+      run: |
+        npm ci
+    
+    - name: Build Next.js app
+      run: |
+        npm run build
+    
+    - name: Sync Capacitor iOS project
+      run: |
+        npx cap sync ios
+    
+    - name: Install CocoaPods dependencies
+      run: |
+        cd ios/App
+        pod install
+    
+    - name: Setup Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.1'
+        bundler-cache: true
+    
+    - name: Setup Fastlane
+      run: |
+        cd ios
+        gem install fastlane
+        
+        # Create fastlane directory structure if it doesn't exist
+        mkdir -p fastlane
+        
+        # Create Fastfile if not exists
+        if [ ! -f fastlane/Fastfile ]; then
+          cat > fastlane/Fastfile << 'EOF'
+          default_platform(:ios)
+
+          platform :ios do
+            desc "Build and upload to TestFlight"
+            lane :beta do
+              # Build the app
+              build_app(
+                workspace: "App.xcworkspace",
+                scheme: "App",
+                clean: true,
+                export_method: "app-store",
+                output_directory: "./build"
+              )
+              
+              # Upload to TestFlight
+              upload_to_testflight(
+                skip_waiting_for_build_processing: true
+              )
+            end
+            
+            desc "Just build for testing"
+            lane :build_only do
+              build_app(
+                workspace: "App.xcworkspace",
+                scheme: "App",
+                clean: true,
+                export_method: "app-store",
+                output_directory: "./build"
+              )
+            end
+          end
+          EOF
+        fi
+        
+        # Create Appfile if not exists
+        if [ ! -f fastlane/Appfile ]; then
+          cat > fastlane/Appfile << EOF
+          app_identifier("com.billease.app.UNC2YV5NU9")
+          apple_id("${{ secrets.APPLE_ID }}")
+          team_id("${{ secrets.APPSTORE_CONNECT_TEAM_ID }}")
+          EOF
+        fi
+    
+    - name: Import Code Signing
+      uses: apple-actions/import-codesign-certs@v2
+      with:
+        p12-file-base64: ${{ secrets.IOS_P12_BASE64 }}
+        p12-password: ${{ secrets.IOS_P12_PASSWORD }}
+    
+    - name: Install Provisioning Profile
+      run: |
+        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+        echo "${{ secrets.IOS_PROVISIONING_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision
+    
+    - name: Set up Match (Optional but recommended for future)
+      if: false  # Disabled for now, but useful for proper signing management
+      run: |
+        cd ios
+        fastlane match init
+    
+    - name: Run Fastlane Beta
+      env:
+        # App Store Connect API Key (Recommended method)
+        APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+        APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+        APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
+        APP_STORE_CONNECT_API_KEY_KEY_CONTENT: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
+        
+        # Alternative: Apple ID credentials
+        FASTLANE_USER: ${{ secrets.APPLE_ID }}
+        FASTLANE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        
+        # Team ID
+        FASTLANE_TEAM_ID: ${{ secrets.APPSTORE_CONNECT_TEAM_ID }}
+        
+        # Skip prompts
+        FASTLANE_SKIP_UPDATE_CHECK: "true"
+        FASTLANE_HIDE_CHANGELOG: "true"
+        
+        # Optional: For 2FA
+        SPACESHIP_2FA_SMS_DEFAULT_PHONE_NUMBER: ${{ secrets.APPLE_PHONE_NUMBER }}
+      run: |
+        cd ios
+        
+        # First try with API key (recommended)
+        echo "Building with Fastlane..."
+        
+        # Create a temporary key file for App Store Connect API
+        if [ -n "$APP_STORE_CONNECT_API_KEY_KEY" ]; then
+          echo "$APP_STORE_CONNECT_API_KEY_KEY" > /tmp/AuthKey_$APP_STORE_CONNECT_API_KEY_KEY_ID.p8
+          export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="/tmp/AuthKey_$APP_STORE_CONNECT_API_KEY_KEY_ID.p8"
+        fi
+        
+        # Run fastlane
+        fastlane beta
+        
+        # If above fails, try with just build
+        # fastlane build_only
+    
+    - name: Upload IPA as artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: iOS-IPA-Fastlane
+        path: ios/build/*.ipa
+        retention-days: 7

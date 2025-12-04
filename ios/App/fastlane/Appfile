@@ -1,0 +1,4 @@
+# ios/fastlane/Appfile
+app_identifier("com.billease.app.UNC2YV5NU9") # Your bundle identifier
+apple_id(ENV["APPLE_ID"]) # Will be set via environment variable
+team_id(ENV["TEAM_ID"])   # Will be set via environment variable
