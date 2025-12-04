@@ -3,11 +3,11 @@ name: iOS Build and TestFlight Upload
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch:  # Allows manual triggering
+  workflow_dispatch:
 
 jobs:
   build-ios:
-    runs-on: macos-latest  # Must be macOS for iOS builds
+    runs-on: macos-latest
     
     steps:
     - name: Checkout code
@@ -47,106 +47,37 @@ jobs:
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
         echo "${{ secrets.IOS_PROVISIONING_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision
     
-    - name: Extract Provisioning Profile UUID
-      id: profile
+    - name: Debug - Check Project Settings
       run: |
-        # Extract the UUID from the provisioning profile
-        UUID=$(grep -a -A1 UUID ~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision | grep -o "[-a-zA-Z0-9]\{36\}" || echo "")
-        if [ -z "$UUID" ]; then
-          # Alternative method to extract UUID
-          UUID=$(grep -o '<key>UUID</key>.*<string>[-a-zA-Z0-9]\{36\}</string>' ~/Library/MobileDevice/Provisioning\ Profiles/AppStore.mobileprovision | grep -o "[-a-zA-Z0-9]\{36\}" || echo "")
-        fi
-        echo "uuid=$UUID" >> $GITHUB_OUTPUT
-        echo "Using provisioning profile UUID: $UUID"
+        cd ios/App
+        echo "=== Checking project.pbxproj ==="
+        grep -n "DEVELOPMENT_TEAM" App.xcodeproj/project.pbxproj || echo "DEVELOPMENT_TEAM not found"
+        grep -n "CODE_SIGN_STYLE" App.xcodeproj/project.pbxproj || echo "CODE_SIGN_STYLE not found"
+        echo "=== Checking Team ID secret ==="
+        echo "Team ID length: ${#APPSTORE_CONNECT_TEAM_ID}"
+        echo "Team ID: ${APPSTORE_CONNECT_TEAM_ID}"
+      env:
+        APPSTORE_CONNECT_TEAM_ID: ${{ secrets.APPSTORE_CONNECT_TEAM_ID }}
     
-    - name: Patch Xcode Project with Team ID
+    - name: Build and Archive (Auto Signing)
       run: |
         cd ios/App
         
-        echo "Patching project.pbxproj with Team ID..."
-        
-        # Use Python to properly patch the Xcode project file
-        python3 << 'EOF'
-        import re
-
-        with open('App.xcodeproj/project.pbxproj', 'r') as f:
-            content = f.read()
-
-        team_id = "${{ secrets.APPSTORE_CONNECT_TEAM_ID }}"
-
-        # Update Debug configuration
-        debug_start = content.find('504EC3171FED79650016851F /* Debug */ = {')
-        if debug_start != -1:
-        debug_end = content.find('};', debug_start) + 2
-        debug_config = content[debug_start:debug_end]
-        
-        # Add DEVELOPMENT_TEAM if not present
-        if 'DEVELOPMENT_TEAM' not in debug_config:
-            debug_config = re.sub(
-                r'(TARGETED_DEVICE_FAMILY = "1,2";)',
-                r'\1\n\t\t\t\tDEVELOPMENT_TEAM = "' + team_id + '";',
-                debug_config
-            )
-    
-        # Change CODE_SIGN_STYLE to Manual
-        debug_config = debug_config.replace('CODE_SIGN_STYLE = Automatic;', 'CODE_SIGN_STYLE = Manual;')
-        
-        # Update the content
-        content = content[:debug_start] + debug_config + content[debug_end:]
-
-        # Update Release configuration
-        release_start = content.find('504EC3181FED79650016851F /* Release */ = {')
-        if release_start != -1:
-            release_end = content.find('};', release_start) + 2
-            release_config = content[release_start:release_end]
-            
-            # Add DEVELOPMENT_TEAM if not present
-            if 'DEVELOPMENT_TEAM' not in release_config:
-                release_config = re.sub(
-                    r'(TARGETED_DEVICE_FAMILY = "1,2";)',
-                    r'\1\n\t\t\t\tDEVELOPMENT_TEAM = "' + team_id + '";',
-                    release_config
-                )
-            
-            # Change CODE_SIGN_STYLE to Manual
-            release_config = release_config.replace('CODE_SIGN_STYLE = Automatic;', 'CODE_SIGN_STYLE = Manual;')
-            
-            # Update the content
-            content = content[:release_start] + release_config + content[release_end:]
-
-        # Write the updated content
-        with open('App.xcodeproj/project.pbxproj', 'w') as f:
-            f.write(content)
-
-        print("✓ Project file patched successfully")
-        EOF
-    
-    - name: Build and Archive
-      run: |
-        cd ios/App
-        
-        echo "Building archive..."
-        
-        # Build the archive with explicit signing settings
+        # Use automatic signing with -allowProvisioningUpdates
+        # This lets Xcode handle all the signing automatically
         xcodebuild archive \
           -project App.xcodeproj \
           -scheme App \
           -destination 'generic/platform=iOS' \
           -configuration Release \
           -archivePath "$RUNNER_TEMP/App.xcarchive" \
-          DEVELOPMENT_TEAM="${{ secrets.APPSTORE_CONNECT_TEAM_ID }}" \
-          CODE_SIGN_STYLE="Manual" \
-          CODE_SIGN_IDENTITY="iPhone Distribution" \
-          PROVISIONING_PROFILE_SPECIFIER="iOS Distribution" \
           -allowProvisioningUpdates
         
-        echo "✓ Archive created successfully"
+        echo "✓ Archive created"
     
-    - name: Export IPA
+    - name: Create Export Options
       run: |
         cd ios/App
-        
-        echo "Creating export options..."
         
         # Create exportOptions.plist
         cat > exportOptions.plist << EOF
@@ -158,13 +89,8 @@ jobs:
             <string>app-store</string>
             <key>teamID</key>
             <string>${{ secrets.APPSTORE_CONNECT_TEAM_ID }}</string>
-            <key>provisioningProfiles</key>
-            <dict>
-                <key>com.billease.app.UNC2YV5NU9</key>
-                <string>${{ steps.profile.outputs.uuid }}</string>
-            </dict>
             <key>signingStyle</key>
-            <string>manual</string>
+            <string>automatic</string>
             <key>stripSwiftSymbols</key>
             <true/>
             <key>uploadBitcode</key>
@@ -175,7 +101,11 @@ jobs:
         </plist>
         EOF
         
-        echo "Exporting IPA..."
+        echo "✓ exportOptions.plist created"
+    
+    - name: Export IPA
+      run: |
+        cd ios/App
         
         # Export the IPA
         xcodebuild -exportArchive \
@@ -184,9 +114,9 @@ jobs:
           -exportOptionsPlist exportOptions.plist \
           -allowProvisioningUpdates
         
-        echo "✓ IPA exported successfully"
+        echo "✓ IPA exported"
         
-        # List the exported files for debugging
+        # Show the result
         ls -la "$RUNNER_TEMP/ipa/"
     
     - name: Upload to TestFlight
@@ -197,10 +127,10 @@ jobs:
         api-key-id: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
         api-private-key: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
     
-    - name: Upload IPA as artifact (for debugging)
-      if: always()  # Run even if previous steps fail
+    - name: Upload IPA as artifact
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: iOS-IPA
+        name: iOS-IPA-Debug
         path: ${{ runner.temp }}/ipa/*.ipa
         retention-days: 7
