@@ -7,16 +7,33 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
-
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.billease.app
-        certificate: $IOS_CERTIFICATE   # .p12 (base64)
-        certificate_password: $IOS_CERTIFICATE_PASSWORD
-        provisioning_profile: $IOS_PROVISIONING_PROFILE  # .mobileprovision (base64)
+        bundle_identifier: com.billease.app.UNC2YV5NU9
 
     scripts:
-      - name: Install & Build
+      # Step 1: Install signing files
+      - name: Install signing files
+        script: |
+          echo "Setting up keychain and signing files"
+
+          # Create a temporary keychain
+          security create-keychain -p "" build.keychain
+          security set-keychain-settings build.keychain
+          security unlock-keychain -p "" build.keychain
+
+          # Import P12 certificate
+          echo "$IOS_CERTIFICATE" | base64 --decode > ios_distribution.p12
+          security import ios_distribution.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -A
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+          # Install provisioning profile
+          echo "$IOS_PROVISION_PROFILE" | base64 --decode > AppStore.mobileprovision
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp AppStore.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      # Step 2: Build Ionic + Capacitor app
+      - name: Build everything
         script: |
           npm ci
           npm run build
@@ -24,8 +41,7 @@ workflows:
           cd ios/App && pod install
           cd ..
 
-      - name: Build IPA
-        script: |
+          # Build IPA using Xcode
           xcode-project build-ipa \
             --workspace "App.xcworkspace" \
             --scheme "App" \
