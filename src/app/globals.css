@@ -38,6 +38,7 @@
     --sidebar-border: 88 30% 85%;
     --sidebar-ring: 123 44% 39%;
   }
+
   .dark {
     --background: 120 10% 10%;
     --foreground: 88 44% 95%;
@@ -72,13 +73,42 @@
     --sidebar-border: 120 10% 25%;
     --sidebar-ring: 40 56% 60%;
   }
-}
 
-@layer base {
+  /* Apply Tailwind base border + theme colors */
   * {
     @apply border-border;
   }
+
+  /* Body with safe-area insets for iOS */
   body {
     @apply bg-background text-foreground;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Ensure the Next.js root container fills available height */
+  #__next {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+
+  /* Header/Page safe area utilities */
+  .pt-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mt-safe-top {
+    margin-top: env(safe-area-inset-top);
+  }
+  .safe-area-top {
+    height: env(safe-area-inset-top);
   }
 }

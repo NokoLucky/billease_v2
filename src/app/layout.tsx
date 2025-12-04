@@ -1,10 +1,8 @@
-
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { MainLayout } from '@/components/main-layout';
-
 
 export const metadata: Metadata = {
   title: 'BillEase',
@@ -23,7 +21,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans&display=swap" rel="stylesheet" />
       </head>
-      <body className={cn("font-body antialiased")}>
+      <body className={cn("font-body antialiased pt-safe-top pb-safe-bottom")}>
         <MainLayout>
           {children}
         </MainLayout>

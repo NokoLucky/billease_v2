@@ -12,10 +12,9 @@ import { format } from 'date-fns';
 export default function Home() {
   const { user } = useAuth();
   const { bills, loading, refetch } = useBills();
-  
+
   if (!user) return null;
 
-  // Get current month name for the section title
   const currentMonth = format(new Date(), 'MMMM yyyy');
 
   return (
@@ -28,14 +27,16 @@ export default function Home() {
           </Button>
         </AddBillSheet>
       </PageHeader>
-      <main className="flex-1 py-8 px-4 md:px-8">
+
+      <main className="flex-1 px-4 md:px-8 pt-4 pb-safe-bottom">
         <DashboardOverview bills={bills} loading={loading} />
+
         <div className="mt-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5" />
-              <h2 className="text-2xl font-bold font-headline">Bills for {currentMonth}</h2>
-            </div>
-            <RecentBills bills={bills} loading={loading} onBillUpdated={refetch} />
+          <div className="flex items-center gap-2 mb-4">
+            <Calendar className="w-5 h-5" />
+            <h2 className="text-2xl font-bold font-headline">Bills for {currentMonth}</h2>
+          </div>
+          <RecentBills bills={bills} loading={loading} onBillUpdated={refetch} />
         </div>
       </main>
     </div>
