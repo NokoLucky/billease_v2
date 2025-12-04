@@ -58,7 +58,7 @@ jobs:
         
         # Create export options plist
         /usr/libexec/PlistBuddy -c "Add :method string app-store" exportOptions.plist
-        /usr/libexec/PlistBuddy -c "Add :teamID string ${{ secrets.IOS_TEAM_ID }}" exportOptions.plist
+        /usr/libexec/PlistBuddy -c "Add :teamID string ${{ secrets.APPSTORE_CONNECT_TEAM_ID }}" exportOptions.plist
         
         xcodebuild -quiet -exportArchive \
           -archivePath $RUNNER_TEMP/App.xcarchive \
@@ -70,6 +70,6 @@ jobs:
       uses: apple-actions/upload-testflight-build@v1
       with:
         app-path: ${{ runner.temp }}/ipa/App.ipa
-        issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
-        api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
-        api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        issuer-id: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+        api-key-id: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+        api-private-key: ${{ secrets.APPSTORE_CONNECT_PRIVATE_KEY }}
