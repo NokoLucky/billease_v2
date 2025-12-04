@@ -27,11 +27,11 @@ workflows:
           cd ../../
 
           echo "Building IPA with Xcode..."
-          # Use xcode-project command without --archive-path
           xcode-project build-ipa \
-            --project "ios/App/App.xcodeproj" \
+            --workspace "ios/App/App.xcworkspace" \
             --scheme "App" \
-            --export-method app-store
+            --archive-directory "$CM_BUILD_DIR" \
+            --export-options-plist "ios/App/export_options.plist"
 
     artifacts:
       - build/ios/ipa/*.ipa
