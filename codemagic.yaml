@@ -10,38 +10,17 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.billease.app.UNC2YV5NU9
+        certificate: "Billease"
+        provisioning_profile: "BillEase provisioning"
 
     scripts:
-      # Step 1: Install signing files
-      - name: Install signing files
-        script: |
-          echo "Setting up keychain and signing files"
-
-          # Create a temporary keychain
-          security create-keychain -p "" build.keychain
-          security set-keychain-settings build.keychain
-          security unlock-keychain -p "" build.keychain
-
-          # Import P12 certificate
-          echo "$IOS_CERTIFICATE" | base64 --decode > ios_distribution.p12
-          security import ios_distribution.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -A
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-
-          # Install provisioning profile
-          echo "$IOS_PROVISION_PROFILE" | base64 --decode > AppStore.mobileprovision
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp AppStore.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
-
-      # Step 2: Build Ionic + Capacitor app
-      - name: Build everything
+      - name: Build Next.js + Capacitor
         script: |
           npm ci
           npm run build
           npx cap sync ios
           cd ios/App && pod install
           cd ..
-
-          # Build IPA using Xcode
           xcode-project build-ipa \
             --workspace "App.xcworkspace" \
             --scheme "App" \
