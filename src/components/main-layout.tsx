@@ -1,4 +1,3 @@
-
 'use client';
 
 import { AuthProvider } from '@/components/auth-provider';
@@ -19,7 +18,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           <Sidebar>
             <SideNav />
           </Sidebar>
-          <SidebarInset>
+          <SidebarInset style={{ paddingTop: 'env(safe-area-inset-top)'}}>
             {children}
           </SidebarInset>
         </SidebarProvider>
@@ -27,4 +26,3 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     </ThemeProvider>
   );
 }
-
