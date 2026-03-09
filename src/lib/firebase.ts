@@ -15,7 +15,7 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 // IndexedDB persistence for native platforms — guard against double init
-let auth;
+let auth: ReturnType<typeof getAuth>;
 try {
   auth = Capacitor.isNativePlatform()
     ? initializeAuth(app, { persistence: indexedDBLocalPersistence })
