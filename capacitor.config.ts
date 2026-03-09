@@ -6,11 +6,15 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
+    iosScheme: 'ionic',
   },
   plugins: {
     StatusBar: {
       style: 'DEFAULT',
       backgroundColor: '#f0fdf4',
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
     },
   },
 };
