@@ -1,0 +1,7 @@
+{
+  "name": "BillEase",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react"
+}

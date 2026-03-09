@@ -12,6 +12,7 @@ import {
 
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { ThemeProvider } from './components/ThemeProvider';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useProfile } from './lib/firestore';
 import './theme/global.css';
 
@@ -103,15 +104,17 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => (
-  <IonApp>
-    <ThemeProvider>
-      <AuthProvider>
-        <IonReactRouter>
-          <AppRoutes />
-        </IonReactRouter>
-      </AuthProvider>
-    </ThemeProvider>
-  </IonApp>
+  <ErrorBoundary>
+    <IonApp>
+      <ThemeProvider>
+        <AuthProvider>
+          <IonReactRouter>
+            <AppRoutes />
+          </IonReactRouter>
+        </AuthProvider>
+      </ThemeProvider>
+    </IonApp>
+  </ErrorBoundary>
 );
 
 export default App;
