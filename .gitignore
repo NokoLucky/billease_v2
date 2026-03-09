@@ -67,3 +67,31 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Build output — Appflow builds this itself
+dist/
+
+# Capacitor functions build
+functions/lib/
+functions/node_modules/
+
+# Environment files
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+# Capacitor — keep ios/ and android/ committed so Appflow can build
+# Only ignore generated/cache folders inside them
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/.xcode.env.local
+android/.gradle/
+android/app/build/
