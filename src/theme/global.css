@@ -1,0 +1,315 @@
+/* ── Ionic base imports ── */
+@import '@ionic/react/css/core.css';
+@import '@ionic/react/css/normalize.css';
+@import '@ionic/react/css/structure.css';
+@import '@ionic/react/css/typography.css';
+@import '@ionic/react/css/padding.css';
+@import '@ionic/react/css/float-elements.css';
+@import '@ionic/react/css/text-alignment.css';
+@import '@ionic/react/css/text-transformation.css';
+@import '@ionic/react/css/flex-utils.css';
+@import '@ionic/react/css/display.css';
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --ion-font-family: 'Plus Jakarta Sans', sans-serif;
+  --ion-color-primary: #22c55e;
+  --ion-color-primary-rgb: 34, 197, 94;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-shade: #16a34a;
+  --ion-color-primary-tint: #4ade80;
+  --ion-color-success: #22c55e;
+  --ion-color-warning: #f59e0b;
+  --ion-color-danger: #ef4444;
+  --ion-background-color: #f0fdf4;
+  --ion-toolbar-background: #ffffff;
+  --ion-toolbar-color: #15803d;
+  --ion-tab-bar-background: #ffffff;
+  --ion-tab-bar-color: #9ca3af;
+  --ion-tab-bar-color-selected: #22c55e;
+  --ion-tab-bar-border-color: #dcfce7;
+  --ion-card-background: #ffffff;
+  --ion-text-color: #111827;
+  --ion-item-background: transparent;
+  --be-green-50: #f0fdf4;
+  --be-green-100: #dcfce7;
+  --be-green-500: #22c55e;
+  --be-green-600: #16a34a;
+  --be-green-700: #15803d;
+  --be-shadow: 0 2px 16px rgba(34, 197, 94, 0.08);
+  --be-border: #d1d5db;
+}
+
+/* ── Dark mode ── */
+.ion-palette-dark,
+body.dark {
+  --ion-background-color: #0f1a12;
+  --ion-background-color-rgb: 15, 26, 18;
+  --ion-text-color: #f0fdf4;
+  --ion-text-color-rgb: 240, 253, 244;
+  --ion-toolbar-background: #1a2e1f;
+  --ion-toolbar-color: #4ade80;
+  --ion-tab-bar-background: #1a2e1f;
+  --ion-tab-bar-border-color: #1f3d28;
+  --ion-tab-bar-color: #6b7280;
+  --ion-tab-bar-color-selected: #4ade80;
+  --ion-card-background: #1a2e1f;
+  --ion-item-background: #1a2e1f;
+  --ion-color-medium: #9ca3af;
+  --be-green-50: #0f1a12;
+  --be-green-100: #1f3d28;
+  --be-border: #374151;
+  --be-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+}
+
+.ion-palette-dark ion-toolbar,
+body.dark ion-toolbar {
+  --background: #1a2e1f;
+  --color: #4ade80;
+}
+
+.ion-palette-dark ion-title,
+body.dark ion-title {
+  color: #4ade80;
+}
+
+.ion-palette-dark ion-back-button,
+body.dark ion-back-button {
+  color: #4ade80;
+}
+
+.ion-palette-dark ion-header,
+body.dark ion-header {
+  background: #1a2e1f;
+}
+
+.ion-palette-dark,
+body.dark {
+  --ion-card-background: #1a2e1f;
+}
+
+.ion-palette-dark ion-content,
+body.dark ion-content {
+  --background: #0f1a12;
+}
+
+.ion-palette-dark ion-list,
+body.dark ion-list {
+  --ion-item-background: #1a2e1f;
+  background: transparent;
+}
+
+.ion-palette-dark .form-card,
+.ion-palette-dark .stat-card,
+body.dark .form-card,
+body.dark .stat-card {
+  background: #1a2e1f;
+  border-color: #1f3d28;
+}
+
+.ion-palette-dark .bill-item,
+body.dark .bill-item {
+  background: #1a2e1f;
+  border-color: #1f3d28;
+}
+
+.ion-palette-dark .be-input,
+.ion-palette-dark .be-select-wrap,
+.ion-palette-dark .be-date-wrap,
+body.dark .be-input,
+body.dark .be-select-wrap,
+body.dark .be-date-wrap {
+  background: #1f3d28;
+  border-color: #374151;
+  --background: #1f3d28;
+  --color: #f0fdf4;
+}
+
+.ion-palette-dark .field-label,
+body.dark .field-label {
+  color: #d1fae5;
+}
+
+.ion-palette-dark ion-datetime-button::part(native),
+body.dark ion-datetime-button::part(native) {
+  color: #f0fdf4;
+}
+
+.ion-palette-dark .savings-progress,
+body.dark .savings-progress {
+  background: #1f3d28;
+}
+
+ion-header { background: #ffffff; }
+
+ion-toolbar {
+  --background: #ffffff;
+  --color: #15803d;
+  --border-width: 0;
+  --box-shadow: 0 1px 0 var(--be-green-100);
+}
+
+ion-tab-bar {
+  height: calc(56px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+ion-item { --background: transparent; --border-color: transparent; }
+
+ion-button {
+  --border-radius: 12px;
+  font-weight: 600;
+}
+
+/* Default filled button — green background white text */
+ion-button[fill="solid"] {
+  --background: var(--be-green-500);
+  --background-activated: var(--be-green-600);
+  --color: #ffffff;
+}
+
+/* Clear/outline buttons — green text */
+ion-button[fill="clear"],
+ion-button[fill="outline"] {
+  --color: var(--be-green-600);
+}
+
+/* Toolbar title */
+ion-title {
+  color: #111827;
+  font-weight: 700;
+}
+
+/* ── Form field helpers ── */
+.field-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* ── Inputs — apply .be-input class ── */
+.be-input {
+  --background: #ffffff;
+  --color: #111827;
+  --placeholder-color: #9ca3af;
+  --placeholder-opacity: 1;
+  --padding-start: 14px;
+  --padding-end: 14px;
+  border: 1.5px solid var(--be-border);
+  border-radius: 10px;
+  width: 100%;
+  display: block;
+}
+.be-input input,
+.be-input textarea {
+  color: #111827 !important;
+  caret-color: #22c55e;
+}
+
+/* ── Select wrapper ── */
+.be-select-wrap {
+  background: #ffffff;
+  border: 1.5px solid var(--be-border);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 4px 0 0;
+  overflow: hidden;
+}
+.be-select-wrap ion-select {
+  --color: #111827;
+  --placeholder-color: #9ca3af;
+  width: 100%;
+  padding-left: 14px;
+}
+.be-select-wrap ion-select::part(icon) {
+  color: #6b7280;
+  opacity: 1;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Date button wrapper ── */
+.be-date-wrap {
+  background: #ffffff;
+  border: 1.5px solid var(--be-border);
+  border-radius: 10px;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+}
+ion-datetime-button::part(native) {
+  color: #111827;
+  background: transparent;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 0;
+}
+ion-datetime {
+  --background: #ffffff;
+  --color: #111827;
+  --wheel-fade-background-rgb: 255, 255, 255;
+}
+
+/* ── Cards ── */
+.form-card {
+  background: var(--ion-card-background, #fff);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid var(--be-green-100);
+  box-shadow: var(--be-shadow);
+  margin-bottom: 14px;
+}
+.stat-card {
+  background: var(--ion-card-background, #fff);
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid var(--be-green-100);
+  box-shadow: var(--be-shadow);
+}
+.stat-label {
+  font-size: 0.7rem; font-weight: 600; color: var(--ion-color-medium, #6b7280);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.stat-value {
+  font-size: 1.4rem; font-weight: 800; color: var(--ion-text-color, #111827);
+  letter-spacing: -0.03em; margin-top: 4px;
+}
+.stat-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 8px;
+}
+
+/* ── Bill items ── */
+.bill-item {
+  background: var(--ion-card-background, #fff);
+  border-radius: 14px; padding: 14px 16px;
+  margin-bottom: 10px; border: 1px solid var(--be-green-100);
+  box-shadow: var(--be-shadow); display: flex; align-items: center; gap: 12px;
+}
+.bill-item.paid { opacity: 0.55; }
+.bill-item.paid .bill-name { text-decoration: line-through; }
+.bill-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--be-green-50);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.bill-info { flex: 1; min-width: 0; }
+.bill-name { font-weight: 700; font-size: 0.9rem; color: var(--ion-text-color, #111827); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bill-due { font-size: 0.75rem; color: var(--ion-color-medium, #6b7280); margin-top: 2px; }
+.bill-amount { font-weight: 800; font-size: 0.95rem; color: var(--ion-text-color, #111827); text-align: right; }
+
+/* ── Badges ── */
+.badge-paid { background: var(--be-green-100); color: var(--be-green-700); font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; margin-top: 3px; display: inline-block; }
+.badge-overdue { background: #fee2e2; color: #b91c1c; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; margin-top: 3px; display: inline-block; }
+
+/* ── Misc ── */
+.billease-logo { font-weight: 800; color: var(--be-green-700); font-size: 1.2rem; letter-spacing: -0.03em; }
+.section-title { font-size: 1rem; font-weight: 800; color: var(--ion-text-color, #111827); letter-spacing: -0.02em; margin: 0 0 12px 0; }
+.savings-progress { height: 10px; background: var(--be-green-100); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.savings-progress-fill { height: 100%; background: linear-gradient(90deg, var(--be-green-500), var(--be-green-600)); border-radius: 99px; transition: width 0.5s ease; }
