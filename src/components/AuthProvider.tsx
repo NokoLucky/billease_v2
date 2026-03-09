@@ -19,10 +19,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(firebaseUser);
       setLoading(false);
 
-      // Initialise push notifications when user signs in
-      if (firebaseUser) {
-        await initialisePushNotifications(firebaseUser.uid);
-      }
+      // // Initialise push notifications when user signs in
+      // if (firebaseUser) {
+      //   await initialisePushNotifications(firebaseUser.uid);
+      // }
     });
     return () => unsubscribe();
   }, []);
