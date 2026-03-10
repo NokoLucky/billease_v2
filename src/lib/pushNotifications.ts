@@ -11,27 +11,47 @@ import { updateUserProfile } from './firestore';
  *
  * Safe to call multiple times — checks platform first.
  */
+// Writes a debug log entry to Firestore so we can see it without a Mac
+const debugLog = async (userId: string, message: string, data?: any) => {
+  try {
+    const { db } = await import('./firebase');
+    const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+    await setDoc(doc(db, 'users', userId, 'pushDebug', String(Date.now())), {
+      message,
+      data: data ? JSON.stringify(data) : null,
+      ts: serverTimestamp(),
+    });
+  } catch (_) {}
+};
+
 export const initialisePushNotifications = async (userId: string): Promise<void> => {
   // Only run on real devices (iOS/Android) — not in browser
-  if (!Capacitor.isNativePlatform()) return;
+  if (!Capacitor.isNativePlatform()) {
+    return;
+  }
 
   try {
+    await debugLog(userId, '1. isNativePlatform = true, starting push init');
+
     // ── 1. Request permission ──────────────────────────────────────
     const permResult = await PushNotifications.requestPermissions();
+    await debugLog(userId, '2. Permission result', permResult);
 
     if (permResult.receive !== 'granted') {
-      console.log('Push notification permission denied');
+      await debugLog(userId, '3. Permission DENIED - stopping');
       return;
     }
 
+    await debugLog(userId, '3. Permission granted, calling register()');
+
     // ── 2. Register with FCM / APNs ────────────────────────────────
     await PushNotifications.register();
+    await debugLog(userId, '4. register() called, waiting for token...');
 
     // ── 3. Save token to Firestore ─────────────────────────────────
     PushNotifications.addListener('registration', async (token) => {
-      console.log('FCM token:', token.value);
+      await debugLog(userId, '5. GOT TOKEN', { token: token.value });
       try {
-        // Get current tokens to avoid duplicates
         const { getUserProfile } = await import('./firestore');
         const profile = await getUserProfile(userId);
         const existing = profile.fcmTokens ?? [];
@@ -40,37 +60,36 @@ export const initialisePushNotifications = async (userId: string): Promise<void>
           await updateUserProfile(userId, {
             fcmTokens: [...existing, token.value],
           });
+          await debugLog(userId, '6. Token saved to Firestore successfully');
+        } else {
+          await debugLog(userId, '6. Token already exists, skipping');
         }
-      } catch (e) {
-        console.error('Failed to save FCM token:', e);
+      } catch (e: any) {
+        await debugLog(userId, '6. ERROR saving token', { error: e?.message });
       }
     });
 
     // ── 4. Handle registration errors ─────────────────────────────
-    PushNotifications.addListener('registrationError', (err) => {
-      console.error('Push registration error:', err);
+    PushNotifications.addListener('registrationError', async (err) => {
+      await debugLog(userId, '5. REGISTRATION ERROR', err);
     });
 
     // ── 5. Handle foreground notifications ────────────────────────
-    // When app is open, show a local alert since iOS suppresses banners
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
       console.log('Foreground notification:', notification);
-      // You can show an IonToast or IonAlert here if needed
-      // For now we just log — background/killed state is handled by the OS
     });
 
     // ── 6. Handle notification tap ────────────────────────────────
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       console.log('Notification tapped:', action);
       const type = action.notification.data?.type;
-      // Route based on notification type
       if (type === 'due_soon') {
         window.location.href = '/bills';
       }
     });
 
-  } catch (e) {
-    console.error('Push notification setup failed:', e);
+  } catch (e: any) {
+    await debugLog(userId, 'EXCEPTION in initialisePushNotifications', { error: e?.message });
   }
 };
 
