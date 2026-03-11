@@ -68,15 +68,15 @@ const DashboardPage: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent>
+      <IonContent fullscreen={false}>
         <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
           <IonRefresherContent />
         </IonRefresher>
 
-        <div style={{ padding: '16px 16px 100px' }}>
+        <div style={{ padding: '24px 16px 100px' }}>
 
           {/* ── Month label ── */}
-          <p style={{ margin: '0 0 14px', fontSize: 13, color: '#6b7280', fontWeight: 600 }}>
+          <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--ion-color-medium)', fontWeight: 600 }}>
             {currentMonth}
           </p>
 
@@ -93,7 +93,7 @@ const DashboardPage: React.FC = () => {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
               <div className="stat-card">
-                <div className="stat-icon" style={{ background: 'var(--be-green-100)' }}>💳</div>
+                <div className="stat-icon" style={{ background: '#dcfce7' }}>💳</div>
                 <div className="stat-label">Total Bills</div>
                 <div className="stat-value" style={{ fontSize: '1.1rem' }}>{fmt(totalBills)}</div>
               </div>
@@ -103,7 +103,7 @@ const DashboardPage: React.FC = () => {
                 <div className="stat-value" style={{ fontSize: '1.1rem', color: 'var(--be-green-600)' }}>{fmt(totalPaid)}</div>
               </div>
               <div className="stat-card">
-                <div className="stat-icon" style={{ background: 'var(--ion-color-warning-tint)' }}>⏳</div>
+                <div className="stat-icon" style={{ background: '#fef3c7' }}>⏳</div>
                 <div className="stat-label">Unpaid</div>
                 <div className="stat-value" style={{ fontSize: '1.1rem', color: '#d97706' }}>{fmt(totalUnpaid)}</div>
               </div>

@@ -91,6 +91,7 @@ const AddBillModal: React.FC<Props> = ({ isOpen, onClose, onBillAdded }) => {
                 <label className="field-label">Bill Name</label>
                 <IonInput
                   className="be-input"
+                  type="text"
                   value={name}
                   onIonInput={e => setName(e.detail.value ?? '')}
                   placeholder="e.g. Netflix, Rent, Electricity"

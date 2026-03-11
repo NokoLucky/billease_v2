@@ -14,11 +14,13 @@ const debugLog = async (userId: string, message: string, data?: any) => {
   } catch (_) {}
 };
 
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const initialisePushNotifications = async (userId: string): Promise<void> => {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
-    await debugLog(userId, '1. Starting capacitor-firebase/messaging init');
+    await debugLog(userId, '1. Starting push init');
 
     // ── 1. Request permission ────────────────────────────────────
     const permResult = await FirebaseMessaging.requestPermissions();
@@ -29,39 +31,42 @@ export const initialisePushNotifications = async (userId: string): Promise<void>
       return;
     }
 
-    await debugLog(userId, '3. Permission granted');
+    await debugLog(userId, '3. Permission granted - waiting 3s for APNs token');
 
-    // ── 2. Get FCM token — retry since APNs token may not be ready immediately
+    // ── 2. Wait for APNs token to be ready on iOS ────────────────
+    // iOS needs time after permission grant to register with APNs
+    await wait(3000);
+
+    // ── 3. Get FCM token with retries ────────────────────────────
     let token: string | undefined;
-    for (let attempt = 1; attempt <= 5; attempt++) {
+    for (let attempt = 1; attempt <= 8; attempt++) {
       try {
         await debugLog(userId, `4. Getting token attempt ${attempt}`);
         const result = await FirebaseMessaging.getToken();
         token = result.token;
-        if (token) break;
+        if (token) {
+          await debugLog(userId, `4. Got token on attempt ${attempt}`, { token });
+          break;
+        }
       } catch (e: any) {
         await debugLog(userId, `4. Attempt ${attempt} failed`, { error: e?.message });
-        if (attempt < 5) {
-          await new Promise(resolve => setTimeout(resolve, attempt * 2000));
-        }
+        await wait(3000);
       }
     }
 
     if (!token) {
-      await debugLog(userId, '5. Token was empty');
+      await debugLog(userId, '5. All attempts exhausted, no token');
       return;
     }
 
-    // ── 3. Save token to Firestore ───────────────────────────────
+    // ── 4. Save token to Firestore ───────────────────────────────
     try {
       const { getUserProfile } = await import('./firestore');
       const profile = await getUserProfile(userId);
       const existing = profile.fcmTokens ?? [];
 
       if (!existing.includes(token)) {
-        await updateUserProfile(userId, {
-          fcmTokens: [...existing, token],
-        });
+        await updateUserProfile(userId, { fcmTokens: [...existing, token] });
         await debugLog(userId, '5. Token saved to Firestore');
       } else {
         await debugLog(userId, '5. Token already exists');
@@ -70,14 +75,13 @@ export const initialisePushNotifications = async (userId: string): Promise<void>
       await debugLog(userId, '5. ERROR saving token', { error: e?.message });
     }
 
-    // ── 4. Handle foreground notifications ──────────────────────
+    // ── 5. Handle foreground notifications ──────────────────────
     FirebaseMessaging.addListener('notificationReceived', (event) => {
       console.log('Foreground notification:', event.notification);
     });
 
-    // ── 5. Handle notification tap ───────────────────────────────
+    // ── 6. Handle notification tap ───────────────────────────────
     FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
-      console.log('Notification tapped:', event);
       const type = (event.notification.data as Record<string, string>)?.type;
       if (type === 'due_soon') {
         window.location.href = '/bills';

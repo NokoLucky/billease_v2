@@ -38,11 +38,15 @@ const AppRoutes: React.FC = () => {
 
   // Safety valve — never show spinner for more than 5 seconds
   React.useEffect(() => {
-    const timer = setTimeout(() => setTimedOut(true), 5000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (authLoading || profileLoading) {
+      const timer = setTimeout(() => setTimedOut(true), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [authLoading, profileLoading]);
 
-  if (!timedOut && (authLoading || (user && profileLoading))) {
+  const isLoading = !timedOut && (authLoading || (user && profileLoading));
+
+  if (isLoading) {
     return <IonLoading isOpen={true} message="Loading BillEase..." />;
   }
 
