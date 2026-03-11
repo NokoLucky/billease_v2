@@ -2,6 +2,8 @@ workflows:
   ios-app-store:
     name: BillEase iOS App Store
     max_build_duration: 60
+    integrations:
+      app_store_connect: personal-apple-account-key
     environment:
       groups:
         - app_store_credentials
