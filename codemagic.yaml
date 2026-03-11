@@ -5,8 +5,6 @@ workflows:
     integrations:
       app_store_connect: personal-apple-account-key
     environment:
-      groups:
-        - app_store_credentials
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.billease.app.UNC2YV5NU9
