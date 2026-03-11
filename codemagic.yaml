@@ -46,5 +46,4 @@ workflows:
 
     publishing:
       app_store_connect:
-        apple_id: $APPLE_ID
-        password: $APP_SPECIFIC_PASSWORD
+        auth: integration
