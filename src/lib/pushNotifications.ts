@@ -42,13 +42,9 @@ export const initialisePushNotifications = async (userId: string): Promise<void>
       return;
     }
 
-    await debugLog(userId, '3. Permission granted, calling register()');
+    await debugLog(userId, '3. Permission granted, adding listeners then calling register()');
 
-    // ── 2. Register with FCM / APNs ────────────────────────────────
-    await PushNotifications.register();
-    await debugLog(userId, '4. register() called, waiting for token...');
-
-    // ── 3. Save token to Firestore ─────────────────────────────────
+    // ── 2. Add listeners BEFORE calling register() ─────────────────
     PushNotifications.addListener('registration', async (token) => {
       await debugLog(userId, '5. GOT TOKEN', { token: token.value });
       try {
@@ -69,17 +65,14 @@ export const initialisePushNotifications = async (userId: string): Promise<void>
       }
     });
 
-    // ── 4. Handle registration errors ─────────────────────────────
     PushNotifications.addListener('registrationError', async (err) => {
       await debugLog(userId, '5. REGISTRATION ERROR', err);
     });
 
-    // ── 5. Handle foreground notifications ────────────────────────
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
       console.log('Foreground notification:', notification);
     });
 
-    // ── 6. Handle notification tap ────────────────────────────────
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       console.log('Notification tapped:', action);
       const type = action.notification.data?.type;
@@ -87,6 +80,10 @@ export const initialisePushNotifications = async (userId: string): Promise<void>
         window.location.href = '/bills';
       }
     });
+
+    // ── 3. Now register with APNs/FCM ─────────────────────────────
+    await PushNotifications.register();
+    await debugLog(userId, '4. register() called, waiting for token...');
 
   } catch (e: any) {
     await debugLog(userId, 'EXCEPTION in initialisePushNotifications', { error: e?.message });
