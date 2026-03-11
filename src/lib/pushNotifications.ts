@@ -31,9 +31,21 @@ export const initialisePushNotifications = async (userId: string): Promise<void>
 
     await debugLog(userId, '3. Permission granted');
 
-    // ── 2. Get FCM token directly — no listener needed ───────────
-    const { token } = await FirebaseMessaging.getToken();
-    await debugLog(userId, '4. Got FCM token', { token });
+    // ── 2. Get FCM token — retry since APNs token may not be ready immediately
+    let token: string | undefined;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        await debugLog(userId, `4. Getting token attempt ${attempt}`);
+        const result = await FirebaseMessaging.getToken();
+        token = result.token;
+        if (token) break;
+      } catch (e: any) {
+        await debugLog(userId, `4. Attempt ${attempt} failed`, { error: e?.message });
+        if (attempt < 5) {
+          await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+        }
+      }
+    }
 
     if (!token) {
       await debugLog(userId, '5. Token was empty');

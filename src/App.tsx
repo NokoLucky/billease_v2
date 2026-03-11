@@ -34,8 +34,15 @@ setupIonicReact({ mode: 'ios' });
 const AppRoutes: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
+  const [timedOut, setTimedOut] = React.useState(false);
 
-  if (authLoading || (user && profileLoading)) {
+  // Safety valve — never show spinner for more than 5 seconds
+  React.useEffect(() => {
+    const timer = setTimeout(() => setTimedOut(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!timedOut && (authLoading || (user && profileLoading))) {
     return <IonLoading isOpen={true} message="Loading BillEase..." />;
   }
 
